@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/gocolly/colly"
 	"github.com/gocolly/colly/extensions"
@@ -9,10 +10,14 @@ import (
 
 const seedURL = "https://en.wikipedia.org/wiki/Animal"
 const allowedDomain = "en.wikipedia.org"
+const regexURLWikiNoFiles = "https://en.wikipedia.org/wiki/[^File:].+"
 
 func main() {
 	c := colly.NewCollector(
 		colly.AllowedDomains(allowedDomain),
+		colly.URLFilters(
+			regexp.MustCompile(regexURLWikiNoFiles),
+		),
 		colly.Async(true),
 		colly.MaxDepth(1),
 	)
