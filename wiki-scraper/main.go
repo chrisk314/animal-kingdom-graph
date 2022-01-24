@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -20,12 +21,15 @@ type taxonomicLevel struct {
 	value string
 }
 
-func createTaxonomicLevelFromSelection(s *goquery.Selection) taxonomicLevel {
+func createTaxonomicLevelFromSelection(s *goquery.Selection) (taxonomicLevel, error) {
 	taxLvlStrs := strings.Split(s.Text(), ":")
+	if len(taxLvlStrs) != 2 {
+		return taxonomicLevel{}, errors.New("Not a taxonomic level")
+	}
 	for i := range taxLvlStrs {
 		taxLvlStrs[i] = strings.TrimSpace(taxLvlStrs[i])
 	}
-	return taxonomicLevel{level: taxLvlStrs[0], value: taxLvlStrs[1]}
+	return taxonomicLevel{level: taxLvlStrs[0], value: taxLvlStrs[1]}, nil
 }
 
 func main() {
@@ -42,12 +46,12 @@ func main() {
 
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
-		Parallelism: 10,
+		Parallelism: 1,
 	})
 
-	c.OnRequest(func(r *colly.Request) {
-		fmt.Println("visiting:", r.URL)
-	})
+	// c.OnRequest(func(r *colly.Request) {
+	// 	fmt.Println("Visiting:", r.URL)
+	// })
 
 	c.OnHTML("#bodyContent", func(e *colly.HTMLElement) {
 		infoboxBiota := e.DOM.Find("table.infobox.biota")
@@ -56,13 +60,18 @@ func main() {
 		}
 
 		taxLvlSel := infoboxBiota.Find("tr:contains('Kingdom')")
-		taxLvls := []taxonomicLevel{createTaxonomicLevelFromSelection(taxLvlSel)}
-		for !strings.Contains(taxLvlSel.Text(), "Species") {
+		tl, err := createTaxonomicLevelFromSelection(taxLvlSel)
+		taxLvls := []taxonomicLevel{tl}
+		for {
 			taxLvlSel = taxLvlSel.Next()
-			taxLvls = append(taxLvls, createTaxonomicLevelFromSelection(taxLvlSel))
+			tl, err = createTaxonomicLevelFromSelection(taxLvlSel)
+			if err != nil {
+				break
+			}
+			taxLvls = append(taxLvls, tl)
 		}
 
-		fmt.Println(taxLvls)
+		fmt.Printf("Processing: %s\nGot: %v\n", e.Request.URL, taxLvls)
 
 		e.DOM.Find("a[href]").Each(func(_ int, s *goquery.Selection) {
 			link, exists := s.Attr("href")
