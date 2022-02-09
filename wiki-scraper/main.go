@@ -17,7 +17,7 @@ const allowedDomain = "en.wikipedia.org"
 const regexURLWikiNoFiles = "https://en.wikipedia.org/wiki/[^File:].+"
 const maxTreeDepth = 10
 const async = true
-const parallelism = 100
+const parallelism = 100 // TODO : Look into Wiki rate limits and mitigation strategies.
 
 type taxonomicLevel struct {
 	level string
