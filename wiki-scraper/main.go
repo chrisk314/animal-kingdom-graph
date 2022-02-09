@@ -15,6 +15,9 @@ import (
 const seedURL = "https://en.wikipedia.org/wiki/Eunice_aphroditois"
 const allowedDomain = "en.wikipedia.org"
 const regexURLWikiNoFiles = "https://en.wikipedia.org/wiki/[^File:].+"
+const maxTreeDepth = 10
+const async = true
+const parallelism = 100
 
 type taxonomicLevel struct {
 	level string
@@ -32,21 +35,26 @@ func createTaxonomicLevelFromSelection(s *goquery.Selection) (taxonomicLevel, er
 	return taxonomicLevel{level: taxLvlStrs[0], value: taxLvlStrs[1]}, nil
 }
 
+func processSpecies(taxLvls []taxonomicLevel) {
+	// TODO : Implement this.
+	// Store taxonomic data in graph db. Arango db?
+}
+
 func main() {
 	c := colly.NewCollector(
 		colly.AllowedDomains(allowedDomain),
 		colly.URLFilters(
 			regexp.MustCompile(regexURLWikiNoFiles),
 		),
-		colly.Async(true),
-		colly.MaxDepth(1),
+		colly.Async(async),
+		colly.MaxDepth(maxTreeDepth),
 	)
 
 	extensions.RandomUserAgent(c)
 
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
-		Parallelism: 1,
+		Parallelism: parallelism,
 	})
 
 	// c.OnRequest(func(r *colly.Request) {
@@ -69,9 +77,13 @@ func main() {
 				break
 			}
 			taxLvls = append(taxLvls, tl)
+			if tl.level == "Species" {
+				fmt.Printf("Processing: %s\nGot: %v\n", e.Request.URL, taxLvls)
+				processSpecies(taxLvls)
+				// Species is a leaf in the tree. Terminate the search here.
+				e.Request.Abort()
+			}
 		}
-
-		fmt.Printf("Processing: %s\nGot: %v\n", e.Request.URL, taxLvls)
 
 		e.DOM.Find("a[href]").Each(func(_ int, s *goquery.Selection) {
 			link, exists := s.Attr("href")
