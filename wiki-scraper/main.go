@@ -15,8 +15,8 @@ import (
 	"github.com/arangodb/go-driver/http"
 )
 
-// const seedURL = "https://en.wikipedia.org/wiki/Animal"
 const (
+	// seedURL = "https://en.wikipedia.org/wiki/Animal"
 	seedURL             = "https://en.wikipedia.org/wiki/Eunice_aphroditois"
 	allowedDomain       = "en.wikipedia.org"
 	regexURLWikiNoFiles = "https://en.wikipedia.org/wiki/[^File:].+"
