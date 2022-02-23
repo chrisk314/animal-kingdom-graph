@@ -3,21 +3,44 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gocolly/colly"
 	"github.com/gocolly/colly/extensions"
+
+	driver "github.com/arangodb/go-driver"
+	"github.com/arangodb/go-driver/http"
 )
 
 // const seedURL = "https://en.wikipedia.org/wiki/Animal"
-const seedURL = "https://en.wikipedia.org/wiki/Eunice_aphroditois"
-const allowedDomain = "en.wikipedia.org"
-const regexURLWikiNoFiles = "https://en.wikipedia.org/wiki/[^File:].+"
-const maxTreeDepth = 10
-const async = true
-const parallelism = 100 // TODO : Look into Wiki rate limits and mitigation strategies.
+const (
+	seedURL             = "https://en.wikipedia.org/wiki/Eunice_aphroditois"
+	allowedDomain       = "en.wikipedia.org"
+	regexURLWikiNoFiles = "https://en.wikipedia.org/wiki/[^File:].+"
+	maxTreeDepth        = 10
+	async               = true
+	parallelism         = 100 // TODO : Look into Wiki rate limits and mitigation strategies.
+
+	DatabaseUrl      = "http://localhost:8529"
+	DatabaseUser     = "root"
+	DatabasePassword = "password"
+	DatabaseName     = "animal_kingdom"
+	PhylumCollName   = "pyhlum"
+	ClassCollName    = "class"
+	OrderCollName    = "order"
+	FamilyCollName   = "family"
+	GenusCollName    = "genus"
+	SpeciesCollName  = "species"
+)
+
+type Species struct {
+	Rank string `json:"rank"` // TODO : Should Rank field be included in the stored data?
+	Name string `json:"name"`
+	Url  string `json:"url"`
+}
 
 type taxon struct {
 	rank string
@@ -41,6 +64,87 @@ func processSpecies(taxLvls []taxon) {
 }
 
 func main() {
+
+	// Create ArangoDB connection.
+	var err error
+	var client driver.Client
+	var conn driver.Connection
+
+	conn, err = http.NewConnection(http.ConnectionConfig{
+		Endpoints: []string{DatabaseUrl},
+		//Endpoints: []string{"https://5a812333269f.arangodb.cloud:8529/"},
+	})
+	if err != nil {
+		log.Fatalf("Failed to create HTTP connection: %v", err)
+	}
+	client, err = driver.NewClient(driver.ClientConfig{
+		Connection:     conn,
+		Authentication: driver.BasicAuthentication(DatabaseUser, DatabasePassword),
+		//Authentication: driver.BasicAuthentication("root", "wnbGnPpCXHwbP"),
+	})
+
+	// Create ArangoDB database.
+	var db driver.Database
+	var db_exists bool
+
+	db_exists, err = client.DatabaseExists(nil, DatabaseName)
+
+	if db_exists {
+		fmt.Println("That db exists already")
+		db, err = client.Database(nil, DatabaseName)
+		if err != nil {
+			log.Fatalf("Failed to open existing database: %v", err)
+		}
+	} else {
+		db, err = client.CreateDatabase(nil, DatabaseName, nil)
+		if err != nil {
+			log.Fatalf("Failed to create database: %v", err)
+		}
+	}
+
+	// Create collection.
+	var coll_exists bool
+	coll_exists, err = db.CollectionExists(nil, SpeciesCollName)
+
+	if !coll_exists {
+		var coll driver.Collection
+
+		coll, err = db.CreateCollection(nil, SpeciesCollName, nil)
+		if err != nil {
+			log.Fatalf("Failed to create collection: %v", err)
+		}
+
+		// Insert example data.
+		// Create documents
+		species := []Species{
+			{
+				Rank: "Species",
+				Name: "Syllis ramosa",
+				Url:  "https://en.wikipedia.org/wiki/Syllis_ramosa",
+			},
+			{
+				Rank: "Species",
+				Name: "Delphinus delphis",
+				Url:  "https://en.wikipedia.org/wiki/Common_dolphin",
+			},
+			{
+				Rank: "Species",
+				Name: "Panthera leo",
+				Url:  "https://en.wikipedia.org/wiki/Lion",
+			},
+		}
+		metas, errs, err := coll.CreateDocuments(nil, species)
+
+		if err != nil {
+			log.Fatalf("Failed to create documents: %v", err)
+		} else if err := errs.FirstNonNil(); err != nil {
+			log.Fatalf("Failed to create documents: first error: %v", err)
+		}
+
+		fmt.Printf("Created documents with keys '%s' in collection '%s' in database '%s'\n", strings.Join(metas.Keys(), ","), coll.Name(), db.Name())
+	}
+
+	// Create Colly crawler.
 	c := colly.NewCollector(
 		colly.AllowedDomains(allowedDomain),
 		colly.URLFilters(
@@ -61,6 +165,7 @@ func main() {
 	// 	fmt.Println("Visiting:", r.URL)
 	// })
 
+	// HTML handler function.
 	c.OnHTML("#bodyContent", func(e *colly.HTMLElement) {
 		infoboxBiota := e.DOM.Find("table.infobox.biota")
 		if infoboxBiota.Length() != 1 {
