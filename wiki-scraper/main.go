@@ -19,23 +19,23 @@ const maxTreeDepth = 10
 const async = true
 const parallelism = 100 // TODO : Look into Wiki rate limits and mitigation strategies.
 
-type taxonomicLevel struct {
-	level string
-	value string
+type taxon struct {
+	rank string
+	name string
 }
 
-func createTaxonomicLevelFromSelection(s *goquery.Selection) (taxonomicLevel, error) {
+func createTaxonomicLevelFromSelection(s *goquery.Selection) (taxon, error) {
 	taxLvlStrs := strings.Split(s.Text(), ":")
 	if len(taxLvlStrs) != 2 {
-		return taxonomicLevel{}, errors.New("Not a taxonomic level")
+		return taxon{}, errors.New("Not a taxon")
 	}
 	for i := range taxLvlStrs {
 		taxLvlStrs[i] = strings.TrimSpace(taxLvlStrs[i])
 	}
-	return taxonomicLevel{level: taxLvlStrs[0], value: taxLvlStrs[1]}, nil
+	return taxon{rank: taxLvlStrs[0], name: taxLvlStrs[1]}, nil
 }
 
-func processSpecies(taxLvls []taxonomicLevel) {
+func processSpecies(taxLvls []taxon) {
 	// TODO : Implement this.
 	// Store taxonomic data in graph db. Arango db?
 }
@@ -68,16 +68,16 @@ func main() {
 		}
 
 		taxLvlSel := infoboxBiota.Find("tr:contains('Kingdom')")
-		tl, err := createTaxonomicLevelFromSelection(taxLvlSel)
-		taxLvls := []taxonomicLevel{tl}
+		t, err := createTaxonomicLevelFromSelection(taxLvlSel)
+		taxLvls := []taxon{t}
 		for {
 			taxLvlSel = taxLvlSel.Next()
-			tl, err = createTaxonomicLevelFromSelection(taxLvlSel)
+			t, err = createTaxonomicLevelFromSelection(taxLvlSel)
 			if err != nil {
 				break
 			}
-			taxLvls = append(taxLvls, tl)
-			if tl.level == "Species" {
+			taxLvls = append(taxLvls, t)
+			if t.rank == "Species" {
 				fmt.Printf("Processing: %s\nGot: %v\n", e.Request.URL, taxLvls)
 				processSpecies(taxLvls)
 				// Species is a leaf in the tree. Terminate the search here.
