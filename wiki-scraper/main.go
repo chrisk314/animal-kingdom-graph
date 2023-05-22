@@ -60,8 +60,9 @@ func createTaxonomicLevelFromSelection(s *goquery.Selection) (Taxon, error) {
 	return Taxon{Rank: taxLvlStrs[0], Name: taxLvlStrs[1], Url: url}, nil
 }
 
-func processTaxon(taxLvls []Taxon, coll driver.Collection) {
+func processTaxon(taxLvls []Taxon, taxLvlColls map[string]driver.Collection) {
 	// Store taxonomic data in graph db. Arango db?
+	coll := taxLvlColls[strings.ToLower(taxLvls[len(taxLvls)-1].Rank)]
 	metas, errs, err := coll.CreateDocuments(nil, taxLvls[len(taxLvls)-1:])
 
 	if err != nil {
@@ -114,22 +115,22 @@ func main() {
 
 	// Create collections for all taxonomic levels.
 	var coll_exists bool
-	var taxLevelCollNames []string = []string{PhylumCollName, ClassCollName, OrderCollName, FamilyCollName, GenusCollName, SpeciesCollName}
-	var taxLevelColls map[string]driver.Collection = make(map[string]driver.Collection)
+	var taxLvlCollNames []string = []string{PhylumCollName, ClassCollName, OrderCollName, FamilyCollName, GenusCollName, SpeciesCollName}
+	var taxLvlColls map[string]driver.Collection = make(map[string]driver.Collection)
 
-	for _, taxLevelCollName := range taxLevelCollNames {
-		coll_exists, err = db.CollectionExists(nil, taxLevelCollName)
+	for _, taxLvlCollName := range taxLvlCollNames {
+		coll_exists, err = db.CollectionExists(nil, taxLvlCollName)
 
 		var coll driver.Collection
 		if !coll_exists {
-			coll, err = db.CreateCollection(nil, taxLevelCollName, nil)
+			coll, err = db.CreateCollection(nil, taxLvlCollName, nil)
 			if err != nil {
 				log.Fatalf("Failed to create collection: %v", err)
 			}
 		} else {
-			coll, _ = db.Collection(nil, taxLevelCollName)
+			coll, _ = db.Collection(nil, taxLvlCollName)
 		}
-		taxLevelColls[taxLevelCollName] = coll
+		taxLvlColls[taxLvlCollName] = coll
 	}
 
 	// Create Colly crawler.
@@ -173,7 +174,7 @@ func main() {
 				if t.Rank == "Species" {
 					taxLvls[len(taxLvls)-1].Url = e.Request.URL.String()
 					fmt.Printf("Processing: %s\nGot: %v\n", e.Request.URL, taxLvls)
-					processTaxon(taxLvls, taxLevelColls[strings.ToLower(t.Rank)])
+					processTaxon(taxLvls, taxLvlColls)
 					// Species is a leaf in the tree. Terminate the search here.
 					e.Request.Abort()
 				}
