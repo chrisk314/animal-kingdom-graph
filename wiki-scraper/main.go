@@ -14,7 +14,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gocolly/colly"
-	"github.com/gocolly/colly/extensions"
+	colly_ext "github.com/gocolly/colly/extensions"
 
 	driver "github.com/arangodb/go-driver"
 	"github.com/arangodb/go-driver/http"
@@ -61,7 +61,6 @@ func createTaxonomicLevelFromSelection(s *goquery.Selection) (Taxon, error) {
 }
 
 func processTaxon(taxLvls []Taxon, coll driver.Collection) {
-	// TODO : Implement this.
 	// Store taxonomic data in graph db. Arango db?
 	metas, errs, err := coll.CreateDocuments(nil, taxLvls[len(taxLvls)-1:])
 
@@ -143,7 +142,7 @@ func main() {
 		colly.MaxDepth(maxTreeDepth),
 	)
 
-	extensions.RandomUserAgent(c)
+	colly_ext.RandomUserAgent(c)
 
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
