@@ -53,9 +53,18 @@ func createTaxonomicLevelFromSelection(s *goquery.Selection) (Taxon, error) {
 	return Taxon{Rank: taxLvlStrs[0], Name: taxLvlStrs[1]}, nil
 }
 
-func processSpecies(taxLvls []Taxon) {
+func processTaxon(taxLvls []Taxon, coll driver.Collection) {
 	// TODO : Implement this.
 	// Store taxonomic data in graph db. Arango db?
+	metas, errs, err := coll.CreateDocuments(nil, taxLvls[len(taxLvls)-1:])
+
+	if err != nil {
+		log.Fatalf("Failed to create documents: %v", err)
+	} else if err := errs.FirstNonNil(); err != nil {
+		log.Fatalf("Failed to create documents: first error: %v", err)
+	}
+
+	fmt.Printf("Created document with key '%s' in collection '%s'\n", strings.Join(metas.Keys(), ","), coll.Name())
 }
 
 func main() {
@@ -100,16 +109,21 @@ func main() {
 	// Create collections for all taxonomic levels.
 	var coll_exists bool
 	var taxLevelCollNames []string = []string{PhylumCollName, ClassCollName, OrderCollName, FamilyCollName, GenusCollName, SpeciesCollName}
+	var taxLevelColls map[string]driver.Collection = make(map[string]driver.Collection)
 
 	for _, taxLevelCollName := range taxLevelCollNames {
 		coll_exists, err = db.CollectionExists(nil, taxLevelCollName)
 
+		var coll driver.Collection
 		if !coll_exists {
-			_, err = db.CreateCollection(nil, taxLevelCollName, nil)
+			coll, err = db.CreateCollection(nil, taxLevelCollName, nil)
 			if err != nil {
 				log.Fatalf("Failed to create collection: %v", err)
 			}
+		} else {
+			coll, _ = db.Collection(nil, taxLevelCollName)
 		}
+		taxLevelColls[taxLevelCollName] = coll
 	}
 
 	// Create Colly crawler.
@@ -153,8 +167,8 @@ func main() {
 			if t.Rank == "Species" {
 				// TODO : Add URLs to all taxonomic levels.
 				fmt.Printf("Processing: %s\nGot: %v\n", e.Request.URL, taxLvls)
-				t.Url = e.Request.URL.String()
-				processSpecies(taxLvls)
+				taxLvls[len(taxLvls)-1].Url = e.Request.URL.String()
+				processTaxon(taxLvls, taxLevelColls[strings.ToLower(t.Rank)])
 				// Species is a leaf in the tree. Terminate the search here.
 				e.Request.Abort()
 			}
