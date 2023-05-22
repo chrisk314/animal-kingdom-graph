@@ -36,29 +36,24 @@ const (
 	SpeciesCollName  = "species"
 )
 
-type Species struct {
-	Rank string `json:"rank"` // TODO : Should Rank field be included in the stored data?
+type Taxon struct {
+	Rank string `json:"rank"`
 	Name string `json:"name"`
 	Url  string `json:"url"`
 }
 
-type taxon struct {
-	rank string
-	name string
-}
-
-func createTaxonomicLevelFromSelection(s *goquery.Selection) (taxon, error) {
+func createTaxonomicLevelFromSelection(s *goquery.Selection) (Taxon, error) {
 	taxLvlStrs := strings.Split(s.Text(), ":")
 	if len(taxLvlStrs) != 2 {
-		return taxon{}, errors.New("Not a taxon")
+		return Taxon{}, errors.New("Not a taxon")
 	}
 	for i := range taxLvlStrs {
 		taxLvlStrs[i] = strings.TrimSpace(taxLvlStrs[i])
 	}
-	return taxon{rank: taxLvlStrs[0], name: taxLvlStrs[1]}, nil
+	return Taxon{Rank: taxLvlStrs[0], Name: taxLvlStrs[1]}, nil
 }
 
-func processSpecies(taxLvls []taxon) {
+func processSpecies(taxLvls []Taxon) {
 	// TODO : Implement this.
 	// Store taxonomic data in graph db. Arango db?
 }
@@ -147,7 +142,7 @@ func main() {
 
 		taxLvlSel := infoboxBiota.Find("tr:contains('Kingdom')")
 		t, err := createTaxonomicLevelFromSelection(taxLvlSel)
-		taxLvls := []taxon{t}
+		taxLvls := []Taxon{t}
 		for {
 			taxLvlSel = taxLvlSel.Next()
 			t, err = createTaxonomicLevelFromSelection(taxLvlSel)
@@ -155,8 +150,10 @@ func main() {
 				break
 			}
 			taxLvls = append(taxLvls, t)
-			if t.rank == "Species" {
+			if t.Rank == "Species" {
+				// TODO : Add URLs to all taxonomic levels.
 				fmt.Printf("Processing: %s\nGot: %v\n", e.Request.URL, taxLvls)
+				t.Url = e.Request.URL.String()
 				processSpecies(taxLvls)
 				// Species is a leaf in the tree. Terminate the search here.
 				e.Request.Abort()
