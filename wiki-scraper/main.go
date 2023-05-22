@@ -160,43 +160,25 @@ func main() {
 			return // No table.infobox.biota => this search path is a dead end.
 		}
 
-		taxLvlSel := infoboxBiota.Find("tr:contains('Kingdom')")
-		taxLvls := []Taxon{}
-		t := Taxon{}
-
-		// t, err = createTaxonomicLevelFromSelection(taxLvlSel)
-		// taxLvls := []Taxon{t}
-		// for {
-		// 	taxLvlSel = taxLvlSel.Next()
-		// 	t, err = createTaxonomicLevelFromSelection(taxLvlSel)
-		// 	if err != nil {
-		// 		break
-		// 	}
-		// 	taxLvls = append(taxLvls, t)
-		// 	if t.Rank == "Species" {
-		// 		// TODO : Add URLs to all taxonomic levels.
-		// 		taxLvls[len(taxLvls)-1].Url = e.Request.URL.String()
-		// 		fmt.Printf("Processing: %s\nGot: %v\n", e.Request.URL, taxLvls)
-		// 		processTaxon(taxLvls, taxLevelColls[strings.ToLower(t.Rank)])
-		// 		// Species is a leaf in the tree. Terminate the search here.
-		// 		e.Request.Abort()
-		// 	}
-		// }
-
-		for {
-			_t, err := createTaxonomicLevelFromSelection(taxLvlSel)
-			if err != nil {
-				rank := strings.ToLower(t.Rank)
-				if coll, ok := taxLevelColls[rank]; ok {
+		species := infoboxBiota.Find("tr:contains('Species')")
+		if species.Length() != 0 {
+			taxLvlSel := infoboxBiota.Find("tr:contains('Kingdom')")
+			taxLvls := []Taxon{}
+			for {
+				t, err := createTaxonomicLevelFromSelection(taxLvlSel)
+				if err != nil {
+					break
+				}
+				taxLvls = append(taxLvls, t)
+				if t.Rank == "Species" {
 					taxLvls[len(taxLvls)-1].Url = e.Request.URL.String()
 					fmt.Printf("Processing: %s\nGot: %v\n", e.Request.URL, taxLvls)
-					processTaxon(taxLvls, coll)
+					processTaxon(taxLvls, taxLevelColls[strings.ToLower(t.Rank)])
+					// Species is a leaf in the tree. Terminate the search here.
+					e.Request.Abort()
 				}
-				break
+				taxLvlSel = taxLvlSel.Next()
 			}
-			t = _t
-			taxLvls = append(taxLvls, t)
-			taxLvlSel = taxLvlSel.Next()
 		}
 
 		e.DOM.Find("a[href]").Each(func(_ int, s *goquery.Selection) {
