@@ -102,46 +102,19 @@ func main() {
 		}
 	}
 
-	// Create collection.
+	// Create collections for all taxonomic levels.
 	var coll_exists bool
-	coll_exists, err = db.CollectionExists(nil, SpeciesCollName)
+	var taxLevelCollNames []string = []string{PhylumCollName, ClassCollName, OrderCollName, FamilyCollName, GenusCollName, SpeciesCollName}
 
-	if !coll_exists {
-		var coll driver.Collection
+	for _, taxLevelCollName := range taxLevelCollNames {
+		coll_exists, err = db.CollectionExists(nil, taxLevelCollName)
 
-		coll, err = db.CreateCollection(nil, SpeciesCollName, nil)
-		if err != nil {
-			log.Fatalf("Failed to create collection: %v", err)
+		if !coll_exists {
+			_, err = db.CreateCollection(nil, taxLevelCollName, nil)
+			if err != nil {
+				log.Fatalf("Failed to create collection: %v", err)
+			}
 		}
-
-		// Insert example data.
-		// Create documents
-		species := []Species{
-			{
-				Rank: "Species",
-				Name: "Syllis ramosa",
-				Url:  "https://en.wikipedia.org/wiki/Syllis_ramosa",
-			},
-			{
-				Rank: "Species",
-				Name: "Delphinus delphis",
-				Url:  "https://en.wikipedia.org/wiki/Common_dolphin",
-			},
-			{
-				Rank: "Species",
-				Name: "Panthera leo",
-				Url:  "https://en.wikipedia.org/wiki/Lion",
-			},
-		}
-		metas, errs, err := coll.CreateDocuments(nil, species)
-
-		if err != nil {
-			log.Fatalf("Failed to create documents: %v", err)
-		} else if err := errs.FirstNonNil(); err != nil {
-			log.Fatalf("Failed to create documents: first error: %v", err)
-		}
-
-		fmt.Printf("Created documents with keys '%s' in collection '%s' in database '%s'\n", strings.Join(metas.Keys(), ","), coll.Name(), db.Name())
 	}
 
 	// Create Colly crawler.
