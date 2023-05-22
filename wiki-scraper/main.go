@@ -1,5 +1,10 @@
 package main
 
+// From https://en.wikipedia.org/wiki/Animal ...
+// As of 2022, 2.16 million living animal species have been described — of which around
+// 1.05 million are insects, over 85,000 are molluscs, and around 65,000 are vertebrates
+// — but it has been estimated there are around 7.77 million animal species in total.
+
 import (
 	"errors"
 	"fmt"
@@ -20,7 +25,7 @@ const (
 	seedURL             = "https://en.wikipedia.org/wiki/Eunice_aphroditois"
 	allowedDomain       = "en.wikipedia.org"
 	regexURLWikiNoFiles = "https://en.wikipedia.org/wiki/[^File:].+"
-	maxTreeDepth        = 10
+	maxTreeDepth        = 10 // TODO : Most optimal search for full list of species.
 	async               = true
 	parallelism         = 100 // TODO : Look into Wiki rate limits and mitigation strategies.
 
@@ -50,7 +55,9 @@ func createTaxonomicLevelFromSelection(s *goquery.Selection) (Taxon, error) {
 	for i := range taxLvlStrs {
 		taxLvlStrs[i] = strings.TrimSpace(taxLvlStrs[i])
 	}
-	return Taxon{Rank: taxLvlStrs[0], Name: taxLvlStrs[1]}, nil
+	url := s.Children().Find("a[href]").First().AttrOr("href", "")
+	url = strings.Join([]string{"https://", allowedDomain, url}, "")
+	return Taxon{Rank: taxLvlStrs[0], Name: taxLvlStrs[1], Url: url}, nil
 }
 
 func processTaxon(taxLvls []Taxon, coll driver.Collection) {
@@ -166,8 +173,8 @@ func main() {
 			taxLvls = append(taxLvls, t)
 			if t.Rank == "Species" {
 				// TODO : Add URLs to all taxonomic levels.
-				fmt.Printf("Processing: %s\nGot: %v\n", e.Request.URL, taxLvls)
 				taxLvls[len(taxLvls)-1].Url = e.Request.URL.String()
+				fmt.Printf("Processing: %s\nGot: %v\n", e.Request.URL, taxLvls)
 				processTaxon(taxLvls, taxLevelColls[strings.ToLower(t.Rank)])
 				// Species is a leaf in the tree. Terminate the search here.
 				e.Request.Abort()
