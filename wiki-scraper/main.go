@@ -93,7 +93,7 @@ func main() {
 	}
 
 	// Get ArangoDB collections.
-	taxLvlColls, err := GetOrCreateCollections(config)
+	_, taxLvlColls, err := GetOrCreateCollections(config)
 	if err != nil {
 		log.Fatalf("Failed to create collections: %v", err)
 	}
