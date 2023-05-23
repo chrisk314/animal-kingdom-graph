@@ -28,11 +28,11 @@ func GetOrCreateCollections(config Config) (arango.Graph, map[string]arango.Coll
 
 	// Create ArangoDB database.
 	var db arango.Database
-	var db_exists bool
+	var dbExists bool
 
-	db_exists, err = client.DatabaseExists(nil, config.DatabaseName)
+	dbExists, err = client.DatabaseExists(nil, config.DatabaseName)
 
-	if db_exists {
+	if dbExists {
 		fmt.Println("That db exists already")
 		db, err = client.Database(nil, config.DatabaseName)
 		if err != nil {
