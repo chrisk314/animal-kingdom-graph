@@ -71,20 +71,20 @@ func GetOrCreateCollections(config Config) (arango.Graph, map[string]arango.Coll
 
 	// Create collections for all taxonomic levels.
 	var collExists bool
+	var coll arango.Collection
 	var taxLvlCollNames []string = []string{PhylumCollName, ClassCollName, OrderCollName, FamilyCollName, GenusCollName, SpeciesCollName}
 	var taxLvlColls map[string]arango.Collection = make(map[string]arango.Collection)
 
 	for _, taxLvlCollName := range taxLvlCollNames {
-		collExists, err = db.CollectionExists(nil, taxLvlCollName)
+		collExists, err = graph.VertexCollectionExists(nil, taxLvlCollName)
 
-		var coll arango.Collection
 		if !collExists {
-			coll, err = db.CreateCollection(nil, taxLvlCollName, nil)
+			coll, err = graph.CreateVertexCollection(nil, taxLvlCollName)
 			if err != nil {
 				log.Fatalf("Failed to create collection: %v", err)
 			}
 		} else {
-			coll, _ = db.Collection(nil, taxLvlCollName)
+			coll, _ = graph.VertexCollection(nil, taxLvlCollName)
 		}
 		taxLvlColls[taxLvlCollName] = coll
 	}
@@ -99,20 +99,11 @@ func GetOrCreateCollections(config Config) (arango.Graph, map[string]arango.Coll
 	}
 
 	for _, taxLvlEdgeCollName := range taxLvlEdgeCollNames {
-		collExists, err = db.CollectionExists(nil, taxLvlEdgeCollName)
-
-		var edgeColl arango.Collection
-		if !collExists {
-			edgeColl, err = db.CreateCollection(nil, taxLvlEdgeCollName, &arango.CreateCollectionOptions{
-				Type: arango.CollectionTypeEdge,
-			})
-			if err != nil {
-				log.Fatalf("Failed to create edge collection: %v", err)
-			}
-		} else {
-			edgeColl, _ = db.Collection(nil, taxLvlEdgeCollName)
+		coll, _, err := graph.EdgeCollection(nil, taxLvlEdgeCollName)
+		if err != nil {
+			log.Fatalf("Failed to select edge collection: %v", err)
 		}
-		taxLvlColls[taxLvlEdgeCollName] = edgeColl
+		taxLvlColls[taxLvlEdgeCollName] = coll
 	}
 
 	return graph, taxLvlColls, nil
