@@ -41,7 +41,10 @@ func createTaxonomicLevelFromSelection(s *goquery.Selection, sUrl url.URL) (Taxo
 
 func processTaxon(taxLvls []Taxon, taxLvlColls map[string]arango.Collection) {
 	// Store taxonomic data for all taxonomic levels in ArangoDB.
-	for _, taxon := range taxLvls {
+	var id arango.DocumentID = ""
+	var idParent arango.DocumentID = ""
+
+	for i, taxon := range taxLvls {
 		coll, ok := taxLvlColls[strings.ToLower(taxon.Rank)]
 		if !ok {
 			// Taxonomic heirerchy level not tracked in collections.
@@ -55,7 +58,6 @@ func processTaxon(taxLvls []Taxon, taxLvlColls map[string]arango.Collection) {
 		}
 		defer cursor.Close()
 		var qTaxon Taxon
-		var id arango.DocumentID = ""
 		for {
 			qMeta, err := cursor.ReadDocument(nil, &qTaxon)
 			if arango.IsNoMoreDocuments(err) {
@@ -79,6 +81,46 @@ func processTaxon(taxLvls []Taxon, taxLvlColls map[string]arango.Collection) {
 			id = meta.ID
 			fmt.Printf("Created document with id '%s' in collection '%s'\n", id, coll.Name())
 		}
+		if i > 0 {
+			// Create edge from parent taxon to current taxon.
+			edgeCollName := fmt.Sprintf("%sMembers", strings.ToLower(taxLvls[i-1].Rank))
+			edgeColl, ok := taxLvlColls[edgeCollName]
+			if !ok {
+				// Taxonomic heirerchy level not tracked in collections.
+				continue
+			}
+			// Check if edge already exists in collection.
+			query := fmt.Sprintf("FOR e IN %s FILTER e._from == '%s' AND e._to == '%s' RETURN e", edgeColl.Name(), id, idParent)
+			cursor, err := edgeColl.Database().Query(nil, query, nil)
+			if err != nil {
+				log.Fatalf("Failed to query collection: %v", err)
+			}
+			defer cursor.Close()
+			var qEdge arango.EdgeDocument
+			var idEdge arango.DocumentID = ""
+			for {
+				qMeta, err := cursor.ReadDocument(nil, &qEdge)
+				if arango.IsNoMoreDocuments(err) {
+					break
+				} else if err != nil {
+					log.Fatalf("Failed to read document: %v", err)
+				}
+				if qEdge.From == id && qEdge.To == idParent {
+					// Edge already exists in collection.
+					idEdge = qMeta.ID
+					break
+				}
+			}
+			if idEdge == "" {
+				// Edge does not exist in collection. Create it.
+				_, err := edgeColl.CreateDocument(nil, arango.EdgeDocument{From: id, To: idParent})
+				if err != nil {
+					log.Fatalf("Failed to create document: %v", err)
+				}
+				fmt.Printf("Created edge from '%s' to '%s' in collection '%s'\n", id, idParent, edgeColl.Name())
+			}
+		}
+		idParent = id
 	}
 }
 
