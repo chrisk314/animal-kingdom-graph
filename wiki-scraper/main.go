@@ -182,7 +182,8 @@ func main() {
 			}
 		}
 
-		e.DOM.Find("a[href]").Each(func(_ int, s *goquery.Selection) {
+		// Limit visited links to those in table.infobox.biota.
+		infoboxBiota.Find("a[href]").Each(func(_ int, s *goquery.Selection) {
 			link, exists := s.Attr("href")
 			if exists {
 				c.Visit(e.Request.AbsoluteURL(link))
