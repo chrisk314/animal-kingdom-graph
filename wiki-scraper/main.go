@@ -40,14 +40,46 @@ func createTaxonomicLevelFromSelection(s *goquery.Selection, sUrl url.URL) (Taxo
 }
 
 func processTaxon(taxLvls []Taxon, taxLvlColls map[string]arango.Collection) {
-	// Store taxonomic data in graph db. Arango db?
-	taxon := taxLvls[len(taxLvls)-1]
-	coll := taxLvlColls[strings.ToLower(taxon.Rank)]
-	meta, err := coll.CreateDocument(nil, taxon)
-	if err != nil {
-		log.Fatalf("Failed to create document: %v", err)
+	// Store taxonomic data for all taxonomic levels in ArangoDB.
+	for _, taxon := range taxLvls {
+		coll, ok := taxLvlColls[strings.ToLower(taxon.Rank)]
+		if !ok {
+			// Taxonomic heirerchy level not tracked in collections.
+			continue
+		}
+		// Check if taxon already exists in collection.
+		query := fmt.Sprintf("FOR t IN %s FILTER t.name == '%s' RETURN t", coll.Name(), taxon.Name)
+		cursor, err := coll.Database().Query(nil, query, nil)
+		if err != nil {
+			log.Fatalf("Failed to query collection: %v", err)
+		}
+		defer cursor.Close()
+		var qTaxon Taxon
+		var id arango.DocumentID = ""
+		for {
+			qMeta, err := cursor.ReadDocument(nil, &qTaxon)
+			if arango.IsNoMoreDocuments(err) {
+				break
+			} else if err != nil {
+				log.Fatalf("Failed to read document: %v", err)
+			}
+			if qTaxon.Name == taxon.Name {
+				// Taxon already exists in collection.
+				id = qMeta.ID
+				fmt.Printf("Found document with id '%s' in collection '%s'\n", id, coll.Name())
+				break
+			}
+		}
+		if id == "" {
+			// Taxon does not exist in collection. Create it.
+			meta, err := coll.CreateDocument(nil, taxon)
+			if err != nil {
+				log.Fatalf("Failed to create document: %v", err)
+			}
+			id = meta.ID
+			fmt.Printf("Created document with id '%s' in collection '%s'\n", id, coll.Name())
+		}
 	}
-	fmt.Printf("Created document with key '%s' in collection '%s'\n", meta.Key, coll.Name())
 }
 
 func main() {
