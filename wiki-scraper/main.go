@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -20,34 +21,13 @@ import (
 	"github.com/arangodb/go-driver/http"
 )
 
-const (
-	// seedURL = "https://en.wikipedia.org/wiki/Animal"
-	seedURL             = "https://en.wikipedia.org/wiki/Eunice_aphroditois"
-	allowedDomain       = "en.wikipedia.org"
-	regexURLWikiNoFiles = "https://en.wikipedia.org/wiki/[^File:].+"
-	maxTreeDepth        = 10 // TODO : Most optimal search for full list of species.
-	async               = true
-	parallelism         = 100 // TODO : Look into Wiki rate limits and mitigation strategies.
-
-	DatabaseUrl      = "http://localhost:8529"
-	DatabaseUser     = "root"
-	DatabasePassword = "password"
-	DatabaseName     = "animal_kingdom"
-	PhylumCollName   = "pyhlum"
-	ClassCollName    = "class"
-	OrderCollName    = "order"
-	FamilyCollName   = "family"
-	GenusCollName    = "genus"
-	SpeciesCollName  = "species"
-)
-
 type Taxon struct {
 	Rank string `json:"rank"`
 	Name string `json:"name"`
 	Url  string `json:"url"`
 }
 
-func createTaxonomicLevelFromSelection(s *goquery.Selection) (Taxon, error) {
+func createTaxonomicLevelFromSelection(s *goquery.Selection, sUrl url.URL) (Taxon, error) {
 	taxLvlStrs := strings.Split(s.Text(), ":")
 	if len(taxLvlStrs) != 2 {
 		return Taxon{}, errors.New("Not a taxon")
@@ -55,8 +35,8 @@ func createTaxonomicLevelFromSelection(s *goquery.Selection) (Taxon, error) {
 	for i := range taxLvlStrs {
 		taxLvlStrs[i] = strings.TrimSpace(taxLvlStrs[i])
 	}
-	url := s.Children().Find("a[href]").First().AttrOr("href", "")
-	url = strings.Join([]string{"https://", allowedDomain, url}, "")
+	href := s.Children().Find("a[href]").First().AttrOr("href", "")
+	url := strings.Join([]string{sUrl.Scheme, sUrl.Host, href}, "")
 	return Taxon{Rank: taxLvlStrs[0], Name: taxLvlStrs[1], Url: url}, nil
 }
 
@@ -76,38 +56,43 @@ func processTaxon(taxLvls []Taxon, taxLvlColls map[string]arango.Collection) {
 
 func main() {
 
-	// Create ArangoDB connection.
 	var err error
+
+	// Load config.
+	config, err := LoadConfig("./app.env")
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	// Create ArangoDB connection.
 	var client arango.Client
 	var conn arango.Connection
 
 	conn, err = http.NewConnection(http.ConnectionConfig{
-		Endpoints: []string{DatabaseUrl},
-		//Endpoints: []string{"https://5a812333269f.arangodb.cloud:8529/"},
+		Endpoints: []string{config.DatabaseUrl},
 	})
 	if err != nil {
 		log.Fatalf("Failed to create HTTP connection: %v", err)
 	}
 	client, err = arango.NewClient(arango.ClientConfig{
 		Connection:     conn,
-		Authentication: arango.BasicAuthentication(DatabaseUser, DatabasePassword),
-		//Authentication: driver.BasicAuthentication("root", "wnbGnPpCXHwbP"),
+		Authentication: arango.BasicAuthentication(config.DatabaseUser, config.DatabasePassword),
 	})
 
 	// Create ArangoDB database.
 	var db arango.Database
 	var db_exists bool
 
-	db_exists, err = client.DatabaseExists(nil, DatabaseName)
+	db_exists, err = client.DatabaseExists(nil, config.DatabaseName)
 
 	if db_exists {
 		fmt.Println("That db exists already")
-		db, err = client.Database(nil, DatabaseName)
+		db, err = client.Database(nil, config.DatabaseName)
 		if err != nil {
 			log.Fatalf("Failed to open existing database: %v", err)
 		}
 	} else {
-		db, err = client.CreateDatabase(nil, DatabaseName, nil)
+		db, err = client.CreateDatabase(nil, config.DatabaseName, nil)
 		if err != nil {
 			log.Fatalf("Failed to create database: %v", err)
 		}
@@ -135,19 +120,19 @@ func main() {
 
 	// Create Colly crawler.
 	c := colly.NewCollector(
-		colly.AllowedDomains(allowedDomain),
+		colly.AllowedDomains(config.CrawlerAllowedDomain),
 		colly.URLFilters(
-			regexp.MustCompile(regexURLWikiNoFiles),
+			regexp.MustCompile(config.CrawlerRegexURLWikiNoFiles),
 		),
-		colly.Async(async),
-		colly.MaxDepth(maxTreeDepth),
+		colly.Async(config.CrawlerAsync),
+		colly.MaxDepth(config.CrawlerMaxTreeDepth),
 	)
 
 	colly_ext.RandomUserAgent(c)
 
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
-		Parallelism: parallelism,
+		Parallelism: config.CrawlerParallelism,
 	})
 
 	// c.OnRequest(func(r *colly.Request) {
@@ -166,7 +151,7 @@ func main() {
 			taxLvlSel := infoboxBiota.Find("tr:contains('Kingdom')")
 			taxLvls := []Taxon{}
 			for {
-				t, err := createTaxonomicLevelFromSelection(taxLvlSel)
+				t, err := createTaxonomicLevelFromSelection(taxLvlSel, *e.Request.URL)
 				if err != nil {
 					break
 				}
@@ -192,7 +177,7 @@ func main() {
 	})
 
 	// Start crawler at seed url.
-	c.Visit(seedURL)
+	c.Visit(config.CrawlerSeedURL)
 
 	// Wait for all threads to finish.
 	c.Wait()
