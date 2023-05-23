@@ -16,7 +16,7 @@ import (
 	"github.com/gocolly/colly"
 	colly_ext "github.com/gocolly/colly/extensions"
 
-	driver "github.com/arangodb/go-driver"
+	arango "github.com/arangodb/go-driver"
 	"github.com/arangodb/go-driver/http"
 )
 
@@ -60,7 +60,7 @@ func createTaxonomicLevelFromSelection(s *goquery.Selection) (Taxon, error) {
 	return Taxon{Rank: taxLvlStrs[0], Name: taxLvlStrs[1], Url: url}, nil
 }
 
-func processTaxon(taxLvls []Taxon, taxLvlColls map[string]driver.Collection) {
+func processTaxon(taxLvls []Taxon, taxLvlColls map[string]arango.Collection) {
 	// Store taxonomic data in graph db. Arango db?
 	coll := taxLvlColls[strings.ToLower(taxLvls[len(taxLvls)-1].Rank)]
 	metas, errs, err := coll.CreateDocuments(nil, taxLvls[len(taxLvls)-1:])
@@ -78,8 +78,8 @@ func main() {
 
 	// Create ArangoDB connection.
 	var err error
-	var client driver.Client
-	var conn driver.Connection
+	var client arango.Client
+	var conn arango.Connection
 
 	conn, err = http.NewConnection(http.ConnectionConfig{
 		Endpoints: []string{DatabaseUrl},
@@ -88,14 +88,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create HTTP connection: %v", err)
 	}
-	client, err = driver.NewClient(driver.ClientConfig{
+	client, err = arango.NewClient(arango.ClientConfig{
 		Connection:     conn,
-		Authentication: driver.BasicAuthentication(DatabaseUser, DatabasePassword),
+		Authentication: arango.BasicAuthentication(DatabaseUser, DatabasePassword),
 		//Authentication: driver.BasicAuthentication("root", "wnbGnPpCXHwbP"),
 	})
 
 	// Create ArangoDB database.
-	var db driver.Database
+	var db arango.Database
 	var db_exists bool
 
 	db_exists, err = client.DatabaseExists(nil, DatabaseName)
@@ -116,12 +116,12 @@ func main() {
 	// Create collections for all taxonomic levels.
 	var coll_exists bool
 	var taxLvlCollNames []string = []string{PhylumCollName, ClassCollName, OrderCollName, FamilyCollName, GenusCollName, SpeciesCollName}
-	var taxLvlColls map[string]driver.Collection = make(map[string]driver.Collection)
+	var taxLvlColls map[string]arango.Collection = make(map[string]arango.Collection)
 
 	for _, taxLvlCollName := range taxLvlCollNames {
 		coll_exists, err = db.CollectionExists(nil, taxLvlCollName)
 
-		var coll driver.Collection
+		var coll arango.Collection
 		if !coll_exists {
 			coll, err = db.CreateCollection(nil, taxLvlCollName, nil)
 			if err != nil {
