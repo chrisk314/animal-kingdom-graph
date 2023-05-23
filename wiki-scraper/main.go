@@ -41,16 +41,13 @@ func createTaxonomicLevelFromSelection(s *goquery.Selection, sUrl url.URL) (Taxo
 
 func processTaxon(taxLvls []Taxon, taxLvlColls map[string]arango.Collection) {
 	// Store taxonomic data in graph db. Arango db?
-	coll := taxLvlColls[strings.ToLower(taxLvls[len(taxLvls)-1].Rank)]
-	metas, errs, err := coll.CreateDocuments(nil, taxLvls[len(taxLvls)-1:])
-
+	taxon := taxLvls[len(taxLvls)-1]
+	coll := taxLvlColls[strings.ToLower(taxon.Rank)]
+	meta, err := coll.CreateDocument(nil, taxon)
 	if err != nil {
-		log.Fatalf("Failed to create documents: %v", err)
-	} else if err := errs.FirstNonNil(); err != nil {
-		log.Fatalf("Failed to create documents: first error: %v", err)
+		log.Fatalf("Failed to create document: %v", err)
 	}
-
-	fmt.Printf("Created document with key '%s' in collection '%s'\n", strings.Join(metas.Keys(), ","), coll.Name())
+	fmt.Printf("Created document with key '%s' in collection '%s'\n", meta.Key, coll.Name())
 }
 
 func main() {
