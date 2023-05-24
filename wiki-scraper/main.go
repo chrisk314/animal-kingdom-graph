@@ -179,6 +179,10 @@ func main() {
 				if err != nil {
 					break
 				}
+				if t.Rank == "Kingdom" && t.Name != config.KingdomName {
+					// Not an animal.
+					e.Request.Abort()
+				}
 				taxLvls = append(taxLvls, t)
 				if t.Rank == "Species" {
 					taxLvls[len(taxLvls)-1].Url = e.Request.URL.String()

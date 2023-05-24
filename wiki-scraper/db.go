@@ -47,10 +47,10 @@ func GetOrCreateCollections(config Config) (arango.Graph, map[string]arango.Coll
 
 	// Get or create graph for taxonomic hierarchy.
 	var graph arango.Graph
-	graph, err = db.Graph(nil, GraphName)
+	graph, err = db.Graph(nil, config.GraphName)
 	if arango.IsNotFound(err) {
 		// Graph does not exist yet.
-		graph, err = db.CreateGraph(nil, GraphName, &arango.CreateGraphOptions{
+		graph, err = db.CreateGraph(nil, config.GraphName, &arango.CreateGraphOptions{
 			EdgeDefinitions: []arango.EdgeDefinition{
 				{Collection: PhylumCollName + "Members", To: []string{PhylumCollName}, From: []string{ClassCollName}},
 				{Collection: ClassCollName + "Members", To: []string{ClassCollName}, From: []string{OrderCollName}},

@@ -5,7 +5,6 @@ import (
 )
 
 const (
-	GraphName       = "animal_kingdom"
 	PhylumCollName  = "phylum"
 	ClassCollName   = "class"
 	OrderCollName   = "order"
@@ -26,11 +25,18 @@ type Config struct {
 	DatabaseUser     string `mapstructure:"DATABASE_USER"`
 	DatabasePassword string `mapstructure:"DATABASE_PASSWORD"`
 	DatabaseName     string `mapstructure:"DATABASE_NAME"`
+
+	GraphName   string `mapstructure:"GRAPH_NAME"`
+	KingdomName string `mapstructure:"KINGDOM_NAME"`
 }
 
 // LoadConfig loads the config from the given path.
 func LoadConfig(path string) (config Config, err error) {
 	viper.SetConfigFile(path)
+
+	viper.SetDefault("GRAPH_NAME", "animal_kingdom")
+	viper.SetDefault("KINGDOM_NAME", "Animalia")
+
 	viper.AutomaticEnv()
 	err = viper.ReadInConfig()
 	if err != nil {
