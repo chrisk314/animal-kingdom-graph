@@ -5,6 +5,7 @@ import (
 )
 
 const (
+	KingdomCollName = "kingdom"
 	PhylumCollName  = "phylum"
 	ClassCollName   = "class"
 	OrderCollName   = "order"

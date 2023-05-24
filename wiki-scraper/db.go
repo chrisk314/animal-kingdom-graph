@@ -52,6 +52,7 @@ func GetOrCreateCollections(config Config) (arango.Graph, map[string]arango.Coll
 		// Graph does not exist yet.
 		graph, err = db.CreateGraph(nil, config.GraphName, &arango.CreateGraphOptions{
 			EdgeDefinitions: []arango.EdgeDefinition{
+				{Collection: KingdomCollName + "Members", To: []string{KingdomCollName}, From: []string{PhylumCollName}},
 				{Collection: PhylumCollName + "Members", To: []string{PhylumCollName}, From: []string{ClassCollName}},
 				{Collection: ClassCollName + "Members", To: []string{ClassCollName}, From: []string{OrderCollName}},
 				{Collection: OrderCollName + "Members", To: []string{OrderCollName}, From: []string{FamilyCollName}},
@@ -72,7 +73,7 @@ func GetOrCreateCollections(config Config) (arango.Graph, map[string]arango.Coll
 	// Create collections for all taxonomic levels.
 	var collExists bool
 	var coll arango.Collection
-	var taxLvlCollNames []string = []string{PhylumCollName, ClassCollName, OrderCollName, FamilyCollName, GenusCollName, SpeciesCollName}
+	var taxLvlCollNames []string = []string{KingdomCollName, PhylumCollName, ClassCollName, OrderCollName, FamilyCollName, GenusCollName, SpeciesCollName}
 	var taxLvlColls map[string]arango.Collection = make(map[string]arango.Collection)
 
 	for _, taxLvlCollName := range taxLvlCollNames {
@@ -93,6 +94,7 @@ func GetOrCreateCollections(config Config) (arango.Graph, map[string]arango.Coll
 
 	// Create edge collections for all taxonomic levels.
 	var taxLvlEdgeCollNames []string = []string{
+		KingdomCollName + "Members",
 		PhylumCollName + "Members",
 		ClassCollName + "Members",
 		OrderCollName + "Members",
