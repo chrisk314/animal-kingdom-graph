@@ -46,8 +46,23 @@ func createTaxonomicLevelFromSelection(s *goquery.Selection, sUrl url.URL) (Taxo
 func processTaxon(taxLvls []Taxon, taxLvlColls map[string]arango.Collection) {
 	// Store taxonomic data for all taxonomic levels in ArangoDB.
 	var idParent arango.DocumentID = ""
+	var rankParent string = ""
 
-	for i, taxon := range taxLvls {
+	// Check all required taxonomic levels are present.
+	var rankSequence = []string{"Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"}
+	var rankMap = make(map[string]bool)
+	for _, taxon := range taxLvls {
+		rankMap[taxon.Rank] = true
+	}
+	for _, rank := range rankSequence {
+		if _, ok := rankMap[rank]; !ok {
+			fmt.Printf("Missing taxonomic level '%s'\n", rank)
+			return
+		}
+	}
+
+	// Store taxonomic data for all taxonomic levels in ArangoDB.
+	for _, taxon := range taxLvls {
 		coll, ok := taxLvlColls[strings.ToLower(taxon.Rank)]
 		if !ok {
 			// Taxonomic heirerchy level not tracked in collections.
@@ -88,7 +103,7 @@ func processTaxon(taxLvls []Taxon, taxLvlColls map[string]arango.Collection) {
 		}
 		if idParent != "" {
 			// Create edge from parent taxon to current taxon.
-			edgeCollName := fmt.Sprintf("%sMembers", strings.ToLower(taxLvls[i-1].Rank))
+			edgeCollName := fmt.Sprintf("%sMembers", rankParent)
 			edgeColl, ok := taxLvlColls[edgeCollName]
 			if !ok {
 				// Taxonomic heirerchy level not tracked in collections.
@@ -127,6 +142,7 @@ func processTaxon(taxLvls []Taxon, taxLvlColls map[string]arango.Collection) {
 			}
 		}
 		idParent = id
+		rankParent = strings.ToLower(taxon.Rank)
 	}
 }
 
