@@ -52,11 +52,11 @@ func GetOrCreateCollections(config Config) (arango.Graph, map[string]arango.Coll
 		// Graph does not exist yet.
 		graph, err = db.CreateGraph(nil, GraphName, &arango.CreateGraphOptions{
 			EdgeDefinitions: []arango.EdgeDefinition{
-				{Collection: PhylumCollName + "Members", From: []string{PhylumCollName}, To: []string{ClassCollName}},
-				{Collection: ClassCollName + "Members", From: []string{ClassCollName}, To: []string{OrderCollName}},
-				{Collection: OrderCollName + "Members", From: []string{OrderCollName}, To: []string{FamilyCollName}},
-				{Collection: FamilyCollName + "Members", From: []string{FamilyCollName}, To: []string{GenusCollName}},
-				{Collection: GenusCollName + "Members", From: []string{GenusCollName}, To: []string{SpeciesCollName}},
+				{Collection: PhylumCollName + "Members", To: []string{PhylumCollName}, From: []string{ClassCollName}},
+				{Collection: ClassCollName + "Members", To: []string{ClassCollName}, From: []string{OrderCollName}},
+				{Collection: OrderCollName + "Members", To: []string{OrderCollName}, From: []string{FamilyCollName}},
+				{Collection: FamilyCollName + "Members", To: []string{FamilyCollName}, From: []string{GenusCollName}},
+				{Collection: GenusCollName + "Members", To: []string{GenusCollName}, From: []string{SpeciesCollName}},
 			},
 		})
 		if err != nil {
