@@ -181,7 +181,7 @@ func main() {
 				}
 				if t.Rank == "Kingdom" && t.Name != config.KingdomName {
 					// Not an animal.
-					e.Request.Abort()
+					return
 				}
 				taxLvls = append(taxLvls, t)
 				if t.Rank == "Species" {
@@ -189,7 +189,7 @@ func main() {
 					fmt.Printf("Processing: %s\nGot: %v\n", e.Request.URL, taxLvls)
 					processTaxon(taxLvls, taxLvlColls)
 					// Species is a leaf in the tree. Terminate the search here.
-					e.Request.Abort()
+					return
 				}
 				taxLvlSel = taxLvlSel.Next()
 			}
