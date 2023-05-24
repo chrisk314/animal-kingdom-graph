@@ -35,7 +35,11 @@ func createTaxonomicLevelFromSelection(s *goquery.Selection, sUrl url.URL) (Taxo
 		taxLvlStrs[i] = strings.TrimSpace(taxLvlStrs[i])
 	}
 	href := s.Children().Find("a[href]").First().AttrOr("href", "")
-	url := strings.Join([]string{sUrl.Scheme, sUrl.Host, href}, "")
+	hrefUrl, err := url.Parse(href)
+	if err != nil {
+		log.Fatalf("Failed to parse url: %v", err)
+	}
+	url := sUrl.ResolveReference(hrefUrl).String()
 	return Taxon{Rank: taxLvlStrs[0], Name: taxLvlStrs[1], Url: url}, nil
 }
 
