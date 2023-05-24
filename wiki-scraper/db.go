@@ -60,11 +60,11 @@ func GetOrCreateCollections(config Config) (arango.Graph, map[string]arango.Coll
 			},
 		})
 		if err != nil {
-			log.Fatalf("Failed to create graph: %v", err)
+			log.Fatalf("Failed to create Graph: %v", err)
 		}
 		fmt.Println("Created Graph with name: ", graph.Name())
 	} else if err != nil {
-		log.Fatalf("Failed to open graph: %v", err)
+		log.Fatalf("Failed to open Graph: %v", err)
 	} else {
 		fmt.Println("Found Graph with name: ", graph.Name())
 	}
@@ -83,8 +83,10 @@ func GetOrCreateCollections(config Config) (arango.Graph, map[string]arango.Coll
 			if err != nil {
 				log.Fatalf("Failed to create collection: %v", err)
 			}
+			fmt.Printf("Created collection '%s'\n", coll.Name())
 		} else {
 			coll, _ = graph.VertexCollection(nil, taxLvlCollName)
+			fmt.Printf("Using existing collection '%s'\n", coll.Name())
 		}
 		taxLvlColls[taxLvlCollName] = coll
 	}
@@ -103,6 +105,7 @@ func GetOrCreateCollections(config Config) (arango.Graph, map[string]arango.Coll
 		if err != nil {
 			log.Fatalf("Failed to select edge collection: %v", err)
 		}
+		fmt.Printf("Using existing edge collection '%s'\n", coll.Name())
 		taxLvlColls[taxLvlEdgeCollName] = coll
 	}
 
