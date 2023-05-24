@@ -6,7 +6,7 @@ import (
 
 const (
 	GraphName       = "animal_kingdom"
-	PhylumCollName  = "pyhlum"
+	PhylumCollName  = "phylum"
 	ClassCollName   = "class"
 	OrderCollName   = "order"
 	FamilyCollName  = "family"
