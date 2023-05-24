@@ -48,6 +48,7 @@ func processTaxon(taxLvls []Taxon, taxLvlColls map[string]arango.Collection) {
 		coll, ok := taxLvlColls[strings.ToLower(taxon.Rank)]
 		if !ok {
 			// Taxonomic heirerchy level not tracked in collections.
+			fmt.Printf("Skipping taxonomic level '%s'\n", taxon.Rank)
 			continue
 		}
 		// Check if taxon already exists in collection.
@@ -81,7 +82,7 @@ func processTaxon(taxLvls []Taxon, taxLvlColls map[string]arango.Collection) {
 			id = meta.ID
 			fmt.Printf("Created document with id '%s' in collection '%s'\n", id, coll.Name())
 		}
-		if i > 0 {
+		if idParent != "" {
 			// Create edge from parent taxon to current taxon.
 			edgeCollName := fmt.Sprintf("%sMembers", strings.ToLower(taxLvls[i-1].Rank))
 			edgeColl, ok := taxLvlColls[edgeCollName]
@@ -115,6 +116,7 @@ func processTaxon(taxLvls []Taxon, taxLvlColls map[string]arango.Collection) {
 				// Edge does not exist in collection. Create it.
 				_, err := edgeColl.CreateDocument(nil, arango.EdgeDocument{From: id, To: idParent})
 				if err != nil {
+					fmt.Printf("Failed edge from '%s' to '%s' in collection '%s'\n", id, idParent, edgeColl.Name())
 					log.Fatalf("Failed to create document: %v", err)
 				}
 				fmt.Printf("Created edge from '%s' to '%s' in collection '%s'\n", id, idParent, edgeColl.Name())
