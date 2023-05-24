@@ -41,7 +41,6 @@ func createTaxonomicLevelFromSelection(s *goquery.Selection, sUrl url.URL) (Taxo
 
 func processTaxon(taxLvls []Taxon, taxLvlColls map[string]arango.Collection) {
 	// Store taxonomic data for all taxonomic levels in ArangoDB.
-	var id arango.DocumentID = ""
 	var idParent arango.DocumentID = ""
 
 	for i, taxon := range taxLvls {
@@ -59,6 +58,7 @@ func processTaxon(taxLvls []Taxon, taxLvlColls map[string]arango.Collection) {
 		}
 		defer cursor.Close()
 		var qTaxon Taxon
+		var id arango.DocumentID = ""
 		for {
 			qMeta, err := cursor.ReadDocument(nil, &qTaxon)
 			if arango.IsNoMoreDocuments(err) {
