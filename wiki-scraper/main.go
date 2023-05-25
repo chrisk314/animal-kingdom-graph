@@ -43,12 +43,7 @@ func createTaxonomicLevelFromSelection(s *goquery.Selection, sUrl url.URL) (Taxo
 	return Taxon{Rank: taxLvlStrs[0], Name: taxLvlStrs[1], Url: url}, nil
 }
 
-func processTaxon(taxLvls []Taxon, taxLvlColls map[string]arango.Collection) {
-	// Store taxonomic data for all taxonomic levels in ArangoDB.
-	var idParent arango.DocumentID = ""
-	var rankParent string = ""
-
-	// Check all required taxonomic levels are present.
+func checkTaxonSequence(taxLvls []Taxon) error {
 	var rankSequence = []string{"Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"}
 	var rankMap = make(map[string]bool)
 	for _, taxon := range taxLvls {
@@ -57,92 +52,115 @@ func processTaxon(taxLvls []Taxon, taxLvlColls map[string]arango.Collection) {
 	for _, rank := range rankSequence {
 		if _, ok := rankMap[rank]; !ok {
 			fmt.Printf("Missing taxonomic level '%s'\n", rank)
-			return
+			return errors.New("Missing taxonomic level")
 		}
 	}
+	return nil
+}
+
+func addTaxonToCollection(taxon Taxon, taxLvlColls map[string]arango.Collection) arango.DocumentID {
+	coll, ok := taxLvlColls[strings.ToLower(taxon.Rank)]
+	if !ok {
+		// Taxonomic heirerchy level not tracked in collections.
+		fmt.Printf("Skipping taxonomic level '%s'\n", taxon.Rank)
+		return ""
+	}
+	// Check if taxon already exists in collection.
+	query := fmt.Sprintf("FOR t IN %s FILTER t.name == '%s' RETURN t", coll.Name(), taxon.Name)
+	cursor, err := coll.Database().Query(nil, query, nil)
+	if err != nil {
+		log.Fatalf("Failed to query collection: %v", err)
+	}
+	defer cursor.Close()
+	var qTaxon Taxon
+	var id arango.DocumentID = ""
+	for {
+		qMeta, err := cursor.ReadDocument(nil, &qTaxon)
+		if arango.IsNoMoreDocuments(err) {
+			break
+		} else if err != nil {
+			log.Fatalf("Failed to read document: %v", err)
+		}
+		if qTaxon.Name == taxon.Name {
+			// Taxon already exists in collection.
+			id = qMeta.ID
+			fmt.Printf("Found document with id '%s' in collection '%s'\n", id, coll.Name())
+			break
+		}
+	}
+	if id == "" {
+		// Taxon does not exist in collection. Create it.
+		meta, err := coll.CreateDocument(nil, taxon)
+		if err != nil {
+			log.Fatalf("Failed to create document: %v", err)
+		}
+		id = meta.ID
+		fmt.Printf("Created document with id '%s' in collection '%s'\n", id, coll.Name())
+	}
+	return id
+}
+
+func addParentTaxonLinkToEdgeCollection(taxLvlColls map[string]arango.Collection, id, idParent arango.DocumentID, rankParent string) {
+	// Create edge from parent taxon to current taxon.
+	edgeCollName := fmt.Sprintf("%sMembers", rankParent)
+	edgeColl, ok := taxLvlColls[edgeCollName]
+	if !ok {
+		// Taxonomic heirerchy level not tracked in collections.
+		log.Fatalf("Failed to retreive collection: %v", edgeCollName)
+	}
+	// Check if edge already exists in collection.
+	query := fmt.Sprintf("FOR e IN %s FILTER e._from == '%s' AND e._to == '%s' RETURN e", edgeColl.Name(), id, idParent)
+	cursor, err := edgeColl.Database().Query(nil, query, nil)
+	if err != nil {
+		log.Fatalf("Failed to query collection: %v", err)
+	}
+	defer cursor.Close()
+	var qEdge arango.EdgeDocument
+	var idEdge arango.DocumentID = ""
+	for {
+		qMeta, err := cursor.ReadDocument(nil, &qEdge)
+		if arango.IsNoMoreDocuments(err) {
+			break
+		} else if err != nil {
+			log.Fatalf("Failed to read document: %v", err)
+		}
+		if qEdge.From == id && qEdge.To == idParent {
+			// Edge already exists in collection.
+			idEdge = qMeta.ID
+			break
+		}
+	}
+	if idEdge == "" {
+		// Edge does not exist in collection. Create it.
+		_, err := edgeColl.CreateDocument(nil, arango.EdgeDocument{From: id, To: idParent})
+		if err != nil {
+			fmt.Printf("Failed edge from '%s' to '%s' in collection '%s'\n", id, idParent, edgeColl.Name())
+			log.Fatalf("Failed to create document: %v", err)
+		}
+		fmt.Printf("Created edge from '%s' to '%s' in collection '%s'\n", id, idParent, edgeColl.Name())
+	}
+}
+
+func processTaxon(taxLvls []Taxon, taxLvlColls map[string]arango.Collection) {
+	// Check all required taxonomic levels are present.
+	err := checkTaxonSequence(taxLvls)
+	if err != nil {
+		return
+	}
+
+	var idParent arango.DocumentID = ""
+	var rankParent string = ""
 
 	// Store taxonomic data for all taxonomic levels in ArangoDB.
 	for _, taxon := range taxLvls {
-		coll, ok := taxLvlColls[strings.ToLower(taxon.Rank)]
-		if !ok {
-			// Taxonomic heirerchy level not tracked in collections.
-			fmt.Printf("Skipping taxonomic level '%s'\n", taxon.Rank)
-			continue
+		id := addTaxonToCollection(taxon, taxLvlColls)
+		if id != "" {
+			if idParent != "" {
+				addParentTaxonLinkToEdgeCollection(taxLvlColls, id, idParent, rankParent)
+			}
+			idParent = id
+			rankParent = strings.ToLower(taxon.Rank)
 		}
-		// Check if taxon already exists in collection.
-		query := fmt.Sprintf("FOR t IN %s FILTER t.name == '%s' RETURN t", coll.Name(), taxon.Name)
-		cursor, err := coll.Database().Query(nil, query, nil)
-		if err != nil {
-			log.Fatalf("Failed to query collection: %v", err)
-		}
-		defer cursor.Close()
-		var qTaxon Taxon
-		var id arango.DocumentID = ""
-		for {
-			qMeta, err := cursor.ReadDocument(nil, &qTaxon)
-			if arango.IsNoMoreDocuments(err) {
-				break
-			} else if err != nil {
-				log.Fatalf("Failed to read document: %v", err)
-			}
-			if qTaxon.Name == taxon.Name {
-				// Taxon already exists in collection.
-				id = qMeta.ID
-				fmt.Printf("Found document with id '%s' in collection '%s'\n", id, coll.Name())
-				break
-			}
-		}
-		if id == "" {
-			// Taxon does not exist in collection. Create it.
-			meta, err := coll.CreateDocument(nil, taxon)
-			if err != nil {
-				log.Fatalf("Failed to create document: %v", err)
-			}
-			id = meta.ID
-			fmt.Printf("Created document with id '%s' in collection '%s'\n", id, coll.Name())
-		}
-		if idParent != "" {
-			// Create edge from parent taxon to current taxon.
-			edgeCollName := fmt.Sprintf("%sMembers", rankParent)
-			edgeColl, ok := taxLvlColls[edgeCollName]
-			if !ok {
-				// Taxonomic heirerchy level not tracked in collections.
-				continue
-			}
-			// Check if edge already exists in collection.
-			query := fmt.Sprintf("FOR e IN %s FILTER e._from == '%s' AND e._to == '%s' RETURN e", edgeColl.Name(), id, idParent)
-			cursor, err := edgeColl.Database().Query(nil, query, nil)
-			if err != nil {
-				log.Fatalf("Failed to query collection: %v", err)
-			}
-			defer cursor.Close()
-			var qEdge arango.EdgeDocument
-			var idEdge arango.DocumentID = ""
-			for {
-				qMeta, err := cursor.ReadDocument(nil, &qEdge)
-				if arango.IsNoMoreDocuments(err) {
-					break
-				} else if err != nil {
-					log.Fatalf("Failed to read document: %v", err)
-				}
-				if qEdge.From == id && qEdge.To == idParent {
-					// Edge already exists in collection.
-					idEdge = qMeta.ID
-					break
-				}
-			}
-			if idEdge == "" {
-				// Edge does not exist in collection. Create it.
-				_, err := edgeColl.CreateDocument(nil, arango.EdgeDocument{From: id, To: idParent})
-				if err != nil {
-					fmt.Printf("Failed edge from '%s' to '%s' in collection '%s'\n", id, idParent, edgeColl.Name())
-					log.Fatalf("Failed to create document: %v", err)
-				}
-				fmt.Printf("Created edge from '%s' to '%s' in collection '%s'\n", id, idParent, edgeColl.Name())
-			}
-		}
-		idParent = id
-		rankParent = strings.ToLower(taxon.Rank)
 	}
 }
 
