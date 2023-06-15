@@ -74,7 +74,9 @@ func buildCrawlerOnHTML(c *colly.Collector, config Config, taxLvlColls map[strin
 	}
 }
 
-func createCollyCrawler(config Config, taxLvlColls map[string]arango.Collection) *colly.Collector {
+// CreateCollyCrawler creates a Colly crawler for extracting taxonomic data
+// from Wikipedia animal species pages.
+func CreateCollyCrawler(config Config, taxLvlColls map[string]arango.Collection) *colly.Collector {
 	c := colly.NewCollector(
 		colly.AllowedDomains(config.CrawlerAllowedDomain),
 		colly.URLFilters(

@@ -25,7 +25,7 @@ func main() {
 	}
 
 	// Create Colly crawler.
-	c := createCollyCrawler(config, taxLvlColls)
+	c := CreateCollyCrawler(config, taxLvlColls)
 
 	// Start crawler at seed url.
 	c.Visit(config.CrawlerSeedURL)
