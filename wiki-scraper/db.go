@@ -9,13 +9,10 @@ import (
 	"github.com/arangodb/go-driver/http"
 )
 
-// GetOrCreateCollections creates ArangoDB collections for all taxonomic levels.
-func GetOrCreateCollections(config Config) (arango.Graph, map[string]arango.Collection, error) {
-	// Create ArangoDB connection.
+func createArangoDBClient(config Config) (arango.Client, error) {
 	var err error
 	var client arango.Client
 	var conn arango.Connection
-
 	conn, err = http.NewConnection(http.ConnectionConfig{
 		Endpoints: []string{config.DatabaseUrl},
 	})
@@ -26,13 +23,14 @@ func GetOrCreateCollections(config Config) (arango.Graph, map[string]arango.Coll
 		Connection:     conn,
 		Authentication: arango.BasicAuthentication(config.DatabaseUser, config.DatabasePassword),
 	})
+	return client, nil
+}
 
-	// Create ArangoDB database.
+func createArangoDB(config Config, client arango.Client) (arango.Database, error) {
+	var err error
 	var db arango.Database
 	var dbExists bool
-
 	dbExists, err = client.DatabaseExists(nil, config.DatabaseName)
-
 	if dbExists {
 		fmt.Println("That db exists already")
 		db, err = client.Database(nil, config.DatabaseName)
@@ -45,8 +43,11 @@ func GetOrCreateCollections(config Config) (arango.Graph, map[string]arango.Coll
 			log.Fatalf("Failed to create database: %v", err)
 		}
 	}
+	return db, nil
+}
 
-	// Get or create graph for taxonomic hierarchy.
+func createArangoDBGraph(config Config, db arango.Database) (arango.Graph, error) {
+	var err error
 	var graph arango.Graph
 	graph, err = db.Graph(nil, config.GraphName)
 	if arango.IsNotFound(err) {
@@ -70,8 +71,11 @@ func GetOrCreateCollections(config Config) (arango.Graph, map[string]arango.Coll
 	} else {
 		fmt.Println("Found Graph with name: ", graph.Name())
 	}
+	return graph, nil
+}
 
-	// Create collections for all taxonomic levels.
+func createArangoDBCollections(config Config, graph arango.Graph) (map[string]arango.Collection, error) {
+	var err error
 	var collExists bool
 	var coll arango.Collection
 	var taxLvlCollNames []string = []string{KingdomCollName, PhylumCollName, ClassCollName, OrderCollName, FamilyCollName, GenusCollName, SpeciesCollName}
@@ -92,8 +96,10 @@ func GetOrCreateCollections(config Config) (arango.Graph, map[string]arango.Coll
 		}
 		taxLvlColls[taxLvlCollName] = coll
 	}
+	return taxLvlColls, nil
+}
 
-	// Create edge collections for all taxonomic levels.
+func createArangoDBEdgeCollections(config Config, graph arango.Graph, taxLvlColls map[string]arango.Collection) (map[string]arango.Collection, error) {
 	var taxLvlEdgeCollNames []string = []string{
 		KingdomCollName + "Members",
 		PhylumCollName + "Members",
@@ -110,6 +116,40 @@ func GetOrCreateCollections(config Config) (arango.Graph, map[string]arango.Coll
 		}
 		fmt.Printf("Using existing edge collection '%s'\n", coll.Name())
 		taxLvlColls[taxLvlEdgeCollName] = coll
+	}
+	return taxLvlColls, nil
+}
+
+// GetOrCreateCollections creates ArangoDB collections for all taxonomic levels.
+func GetOrCreateCollections(config Config) (arango.Graph, map[string]arango.Collection, error) {
+	// Create ArangoDB connection.
+	client, err := createArangoDBClient(config)
+	if err != nil {
+		log.Fatalf("Failed to create ArangoDB client: %v", err)
+	}
+
+	// Create ArangoDB database.
+	db, err := createArangoDB(config, client)
+	if err != nil {
+		log.Fatalf("Failed to create ArangoDB database: %v", err)
+	}
+
+	// Get or create graph for taxonomic hierarchy.
+	graph, err := createArangoDBGraph(config, db)
+	if err != nil {
+		log.Fatalf("Failed to create ArangoDB graph: %v", err)
+	}
+
+	// Create collections for all taxonomic levels.
+	taxLvlColls, err := createArangoDBCollections(config, graph)
+	if err != nil {
+		log.Fatalf("Failed to create ArangoDB collections: %v", err)
+	}
+
+	// Create edge collections for all taxonomic levels.
+	createArangoDBEdgeCollections(config, graph, taxLvlColls)
+	if err != nil {
+		log.Fatalf("Failed to create ArangoDB edge collections: %v", err)
 	}
 
 	return graph, taxLvlColls, nil
