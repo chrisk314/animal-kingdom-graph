@@ -26,14 +26,7 @@ func main() {
 	}
 
 	// Create Colly crawler.
-	c := createCollyCrawler(config)
-
-	// c.OnRequest(func(r *colly.Request) {
-	// 	fmt.Println("Visiting:", r.URL)
-	// })
-
-	// HTML handler function.
-	c.OnHTML("#bodyContent", buildCrawlerOnHTML(c, config, taxLvlColls))
+	c := createCollyCrawler(config, taxLvlColls)
 
 	// Start crawler at seed url.
 	c.Visit(config.CrawlerSeedURL)

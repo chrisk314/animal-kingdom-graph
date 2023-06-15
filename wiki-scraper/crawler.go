@@ -74,7 +74,7 @@ func buildCrawlerOnHTML(c *colly.Collector, config Config, taxLvlColls map[strin
 	}
 }
 
-func createCollyCrawler(config Config) *colly.Collector {
+func createCollyCrawler(config Config, taxLvlColls map[string]arango.Collection) *colly.Collector {
 	c := colly.NewCollector(
 		colly.AllowedDomains(config.CrawlerAllowedDomain),
 		colly.URLFilters(
@@ -90,5 +90,13 @@ func createCollyCrawler(config Config) *colly.Collector {
 		DomainGlob:  "*",
 		Parallelism: config.CrawlerParallelism,
 	})
+
+	// c.OnRequest(func(r *colly.Request) {
+	// 	fmt.Println("Visiting:", r.URL)
+	// })
+
+	// HTML handler function.
+	c.OnHTML("#bodyContent", buildCrawlerOnHTML(c, config, taxLvlColls))
+
 	return c
 }
