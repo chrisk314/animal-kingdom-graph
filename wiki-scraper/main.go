@@ -10,7 +10,6 @@ import (
 )
 
 func main() {
-
 	var err error
 
 	// Load config.
