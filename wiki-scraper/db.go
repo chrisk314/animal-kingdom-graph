@@ -29,9 +29,9 @@ func createArangoDBClient(config Config) (arango.Client, error) {
 func createArangoDB(config Config, client arango.Client) (arango.Database, error) {
 	var err error
 	var db arango.Database
-	var dbExists bool
-	dbExists, err = client.DatabaseExists(nil, config.DatabaseName)
-	if dbExists {
+	var exists bool
+	exists, err = client.DatabaseExists(nil, config.DatabaseName)
+	if exists {
 		fmt.Println("That db exists already")
 		db, err = client.Database(nil, config.DatabaseName)
 		if err != nil {
@@ -76,15 +76,15 @@ func createArangoDBGraph(config Config, db arango.Database) (arango.Graph, error
 
 func createArangoDBCollections(config Config, graph arango.Graph) (map[string]arango.Collection, error) {
 	var err error
-	var collExists bool
+	var exists bool
 	var coll arango.Collection
 	var taxLvlCollNames []string = []string{KingdomCollName, PhylumCollName, ClassCollName, OrderCollName, FamilyCollName, GenusCollName, SpeciesCollName}
 	var taxLvlColls map[string]arango.Collection = make(map[string]arango.Collection)
 
 	for _, taxLvlCollName := range taxLvlCollNames {
-		collExists, err = graph.VertexCollectionExists(nil, taxLvlCollName)
+		exists, err = graph.VertexCollectionExists(nil, taxLvlCollName)
 
-		if !collExists {
+		if !exists {
 			coll, err = graph.CreateVertexCollection(nil, taxLvlCollName)
 			if err != nil {
 				log.Fatalf("Failed to create collection: %v", err)
