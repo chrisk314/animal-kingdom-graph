@@ -164,45 +164,8 @@ func processTaxon(taxLvls []Taxon, taxLvlColls map[string]arango.Collection) {
 	}
 }
 
-func main() {
-
-	var err error
-
-	// Load config.
-	config, err := LoadConfig("./app.env")
-	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
-
-	// Get ArangoDB collections.
-	_, taxLvlColls, err := GetOrCreateCollections(config)
-	if err != nil {
-		log.Fatalf("Failed to create collections: %v", err)
-	}
-
-	// Create Colly crawler.
-	c := colly.NewCollector(
-		colly.AllowedDomains(config.CrawlerAllowedDomain),
-		colly.URLFilters(
-			regexp.MustCompile(config.CrawlerRegexURLWikiNoFiles),
-		),
-		colly.Async(config.CrawlerAsync),
-		colly.MaxDepth(config.CrawlerMaxTreeDepth),
-	)
-
-	colly_ext.RandomUserAgent(c)
-
-	c.Limit(&colly.LimitRule{
-		DomainGlob:  "*",
-		Parallelism: config.CrawlerParallelism,
-	})
-
-	// c.OnRequest(func(r *colly.Request) {
-	// 	fmt.Println("Visiting:", r.URL)
-	// })
-
-	// HTML handler function.
-	c.OnHTML("#bodyContent", func(e *colly.HTMLElement) {
+func buildCrawlerOnHTML(c *colly.Collector, config Config, taxLvlColls map[string]arango.Collection) func(*colly.HTMLElement) {
+	return func(e *colly.HTMLElement) {
 		infoboxBiota := e.DOM.Find("table.infobox.biota")
 		if infoboxBiota.Length() != 1 {
 			return // No table.infobox.biota => this search path is a dead end.
@@ -240,7 +203,53 @@ func main() {
 				c.Visit(e.Request.AbsoluteURL(link))
 			}
 		})
+	}
+}
+
+func createCollyCrawler(config Config) *colly.Collector {
+	c := colly.NewCollector(
+		colly.AllowedDomains(config.CrawlerAllowedDomain),
+		colly.URLFilters(
+			regexp.MustCompile(config.CrawlerRegexURLWikiNoFiles),
+		),
+		colly.Async(config.CrawlerAsync),
+		colly.MaxDepth(config.CrawlerMaxTreeDepth),
+	)
+
+	colly_ext.RandomUserAgent(c)
+
+	c.Limit(&colly.LimitRule{
+		DomainGlob:  "*",
+		Parallelism: config.CrawlerParallelism,
 	})
+	return c
+}
+
+func main() {
+
+	var err error
+
+	// Load config.
+	config, err := LoadConfig("./app.env")
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	// Get ArangoDB collections.
+	_, taxLvlColls, err := GetOrCreateCollections(config)
+	if err != nil {
+		log.Fatalf("Failed to create collections: %v", err)
+	}
+
+	// Create Colly crawler.
+	c := createCollyCrawler(config)
+
+	// c.OnRequest(func(r *colly.Request) {
+	// 	fmt.Println("Visiting:", r.URL)
+	// })
+
+	// HTML handler function.
+	c.OnHTML("#bodyContent", buildCrawlerOnHTML(c, config, taxLvlColls))
 
 	// Start crawler at seed url.
 	c.Visit(config.CrawlerSeedURL)
