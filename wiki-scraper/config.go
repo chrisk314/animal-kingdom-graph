@@ -14,6 +14,7 @@ const (
 	SpeciesCollName = "species"
 )
 
+// Config stores the app configuration.
 type Config struct {
 	CrawlerSeedURL             string `mapstructure:"CRAWLER_SEED_URL"`
 	CrawlerAllowedDomain       string `mapstructure:"CRAWLER_ALLOWED_DOMAIN"`
