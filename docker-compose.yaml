@@ -2,6 +2,7 @@ version: '3.8'
 services:
   arangodb:
     image: arangodb:latest
+    command: ["--http.trusted-origin", "*"]
     environment:
       ARANGO_ROOT_PASSWORD: password  # Username: root
     ports:
