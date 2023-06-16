@@ -1,0 +1,24 @@
+{
+  "name": "graph-vis",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Animal Kingdom Graph Visualization",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "vite": "^4.3.9"
+  },
+  "dependencies": {
+    "arangojs": "^8.3.0",
+    "cors": "^2.8.5",
+    "cytoscape": "^3.25.0",
+    "express": "^4.18.2"
+  }
+}
