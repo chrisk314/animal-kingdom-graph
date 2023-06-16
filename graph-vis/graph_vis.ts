@@ -1,11 +1,21 @@
 import cytoscape from 'cytoscape';
-import arangojs, { Database } from 'arangojs';
+import { Database } from "arangojs/database";
+
+// Store taxonomic heirarchy in map
+const taxonomicRanks = new Map([
+    ['kingdom', 'phylum'],
+    ['phylum', 'class'],
+    ['class', 'order'],
+    ['order', 'family'],
+    ['family', 'genus'],
+    ['genus', 'species'],
+]);
 
 // Connect to ArangoDB
 const db = new Database({
   url: 'http://localhost:8529',
-  databaseName: 'mydb',
-  auth: { username: 'myuser', password: 'mypassword' },
+  databaseName: 'animal_kingdom',
+  auth: { username: 'root', password: 'password' },
 });
 
 // Define the Cytoscape.js graph
@@ -33,11 +43,11 @@ const cy = cytoscape({
 
 // Load the root node of the animal kingdom graph
 let rootNode: any;
-db.query(`FOR t IN Taxa FILTER t.name == 'Animalia' RETURN t`)
+db.query(`FOR t IN kingdom FILTER t.name == 'Animalia' RETURN t`)
   .then((cursor) => cursor.next())
   .then((taxon) => {
     rootNode = taxon;
-    cy.add({ data: { id: rootNode._id, name: rootNode.name } });
+    cy.add({ data: { id: rootNode._id, name: rootNode.name, rank: rootNode.rank } });
   })
   .catch((err) => console.error(err));
 
@@ -46,23 +56,21 @@ cy.on('click', 'node', (evt) => {
   const node = evt.target;
   const nodeId = node.id();
   const nodeRank = node.data('rank');
+  const taxCollName = taxonomicRanks.get(nodeRank);
   const edgeCollName = `${nodeRank}Members`;
-  const taxCollName = `${nodeRank}Taxa`;
-  const taxColl = db.collection(taxCollName);
-  const edgeColl = db.edgeCollection(edgeCollName);
 
   // Load the child nodes of the clicked node
   db.query(
-    `FOR t IN Taxa FILTER t._id IN (FOR e IN ${edgeCollName} FILTER e._from == '${nodeId}' RETURN e._to) RETURN t`
+    `FOR t IN ${taxCollName} FILTER t._id IN (FOR e IN ${edgeCollName} FILTER e._to == '${nodeId}' RETURN e._from) RETURN t`
   )
     .then((cursor) => {
       const childNodes = [];
-      cursor.each((taxon) => {
+      cursor.forEach((taxon) => {
         childNodes.push({ data: { id: taxon._id, name: taxon.name, rank: taxon.rank } });
         cy.add({ data: { id: taxon._id, name: taxon.name, rank: taxon.rank } });
         cy.add({ data: { source: nodeId, target: taxon._id } });
       });
-      node.children(childNodes);
+      node.children(childNodes);  // TODO : What is the purpose of adding children to the node?
     })
     .catch((err) => console.error(err));
 });
@@ -71,17 +79,26 @@ cy.on('click', 'node', (evt) => {
 cy.on('mouseover', 'node', (evt) => {
   const node = evt.target;
   const nodeId = node.id();
-  const taxCollName = `${node.data('rank')}Taxa`;
+  const taxCollName = node.data('rank');
   const taxColl = db.collection(taxCollName);
 
   // Load the summary of the Wikipedia page for the node
   taxColl.document(nodeId).then((taxon) => {
-    const summary = taxon.summary;
-    const image = taxon.image;
+    // const summary = taxon.summary;
+    // const image = taxon.image;
+    // node.qtip({
+    //   content: {
+    //     title: node.data('name'),
+    //     text: `<img src="${image}" /><br>${summary}`,
+    //   },
+    //   show: { event: evt.type, ready: true },
+    //   hide: { event: 'mouseout unfocus' },
+    //   style: { classes: 'qtip-bootstrap', tip: { width: 16, height: 8 } },
+    // });
     node.qtip({
       content: {
         title: node.data('name'),
-        text: `<img src="${image}" /><br>${summary}`,
+        text: `<h2>${node.data('name')}</h2>`,
       },
       show: { event: evt.type, ready: true },
       hide: { event: 'mouseout unfocus' },
