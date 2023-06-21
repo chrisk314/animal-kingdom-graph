@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "cytoscape": "^3.25.0",
+    "cytoscape-fcose": "^2.2.0",
     "vue": "^3.2.47"
   },
   "devDependencies": {

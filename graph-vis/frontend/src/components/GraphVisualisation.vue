@@ -1,5 +1,5 @@
 <template>
-  <div ref="cy"></div>
+  <div id="cy" ref="cy"></div>
 </template>
 
 <script>
@@ -31,8 +31,15 @@ export default {
 </script>
 
 <style scoped>
-div {
-  height: 100%;
-  width: 100%;
+/* TODO : How to select ref="cy" element with CSS selectors? */
+#cy {
+    /* TODO : Figure out scroll bar popping in and out with 100% */
+  /* height: 100%;
+  width: 100%; */
+  height: 99%;
+  width: 99%;
+  position: absolute;
+  top: 0px;
+  left: 0px;
 }
 </style>
