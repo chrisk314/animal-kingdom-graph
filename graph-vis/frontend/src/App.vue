@@ -15,14 +15,26 @@ export default {
   data() {
     return {
       graphData: {
-        elements: [
-          // graph elements here
-        ],
+        elements: [],
         style: [
-          // graph style here
+          {
+            selector: 'node',
+            style: {
+              'background-color': '#666',
+              label: 'data(name)',
+            },
+          },
+          {
+            selector: 'edge',
+            style: {
+              'line-color': '#ccc',
+              'target-arrow-color': '#ccc',
+              'target-arrow-shape': 'triangle',
+            },
+          },
         ],
         layout: {
-          // graph layout here
+          name: "fcose"
         }
       }
     }
