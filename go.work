@@ -1,0 +1,6 @@
+go 1.20
+
+use (
+	./graph-vis/backend
+	./wiki-scraper
+)
