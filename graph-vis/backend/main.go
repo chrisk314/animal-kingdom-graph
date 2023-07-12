@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	http "net/http"
 	"os"
 
 	"github.com/labstack/echo/v4"
@@ -30,6 +31,11 @@ func main() {
 	router := echo.New()
 
 	// Middleware
+	router.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"http://localhost:5173", "http://orion:5173"},
+		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept},
+		AllowMethods: []string{http.MethodGet, http.MethodHead, http.MethodPut, http.MethodPatch, http.MethodPost, http.MethodDelete},
+	}))
 	router.Pre(middleware.RemoveTrailingSlash())
 	router.Use(middleware.Logger())
 	router.Use(middleware.Recover())
