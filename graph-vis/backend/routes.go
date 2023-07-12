@@ -24,7 +24,7 @@ func TaxonGet(c echo.Context) (err error) {
 	if err != nil {
 		return badRequest(c, err.Error())
 	}
-	return c.JSON(http.StatusOK, JSONResp{"data": taxon})
+	return c.JSON(http.StatusOK, JSONResp{"data": TaxonResponse(taxon)})
 }
 
 // TaxonGetChildren serves JSON response containing a list of taxon children.
@@ -39,5 +39,9 @@ func TaxonGetChildren(c echo.Context) (err error) {
 	if err != nil {
 		return badRequest(c, err.Error())
 	}
-	return c.JSON(http.StatusOK, JSONResp{"data": taxa})
+	var taxaResp []TaxonResponse
+	for _, taxon := range taxa {
+		taxaResp = append(taxaResp, TaxonResponse(taxon))
+	}
+	return c.JSON(http.StatusOK, JSONResp{"data": taxaResp})
 }
