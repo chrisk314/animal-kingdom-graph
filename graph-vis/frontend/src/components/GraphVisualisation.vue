@@ -19,27 +19,41 @@ export default {
   methods: {
     // on-click event listener for nodes
     getChildNodes: function(event) {
+      // TODO : Only query the API if the node has not been clicked before.
+      // TODO : Close the node if it has been clicked before.
+
       const node = event.target;
       const nodeId = node.id();
-
       console.log("Clicked node: " + nodeId);
 
       // Call backend api to get child nodes
-      fetch(`http://localhost:5000/api/nodes/${nodeId}/children`)
+      fetch(`http://localhost:5001/api/v1/taxon/${nodeId}/children`)
         .then(response => response.json())
         .then(data => {
-          // Add child nodes to graph
-          this.cy.add(data);
-          // Add edges between parent and child nodes
-          this.cy.add({
-            data: {
-              id: `${nodeId}-child`,
-              source: nodeId,
-              target: data[0].data.id
+          // Build child nodes data
+          let childNodes = data.data.map( (child) => {
+            return {
+              group: "nodes",
+              data: child
             }
-          });
-          // Layout graph
+          })
+          // Build child edges data
+          let childEdges = data.data.map( (child) => {
+            return {
+              group: "edges",
+              data: {
+                id: `${nodeId}-${child.id}`,
+                source: nodeId,
+                target: child.id
+              }
+            }
+          })
+          // Add child nodes and edges to graph
+          this.cy.add(childNodes);
+          this.cy.add(childEdges);
+          // // Layout graph
           this.cy.layout(this.data.layout).run();
+
         })
         .catch(error => console.error(error));
     }
