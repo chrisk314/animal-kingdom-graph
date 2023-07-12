@@ -45,6 +45,7 @@ func createArangoDB(config Config, client arango.Client) (arango.Database, error
 	return db, nil
 }
 
+// GetArangoDB returns an ArangoDB database.
 func GetArangoDB(config Config) (arango.Database, error) {
 	var err error
 	var client arango.Client

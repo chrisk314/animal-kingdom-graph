@@ -26,3 +26,18 @@ func TaxonGet(c echo.Context) (err error) {
 	}
 	return c.JSON(http.StatusOK, JSONResp{"data": taxon})
 }
+
+// TaxonGetChildren serves JSON response containing a list of taxon children.
+func TaxonGetChildren(c echo.Context) (err error) {
+	taxSvc := c.Get("taxonSvc").(*TaxonSvc)
+	rank := c.Param("rank")
+	id := c.Param("id")
+	if id == "" {
+		return badRequest(c, "Missing taxon ID")
+	}
+	taxa, err := taxSvc.GetChildren(rank, id)
+	if err != nil {
+		return badRequest(c, err.Error())
+	}
+	return c.JSON(http.StatusOK, JSONResp{"data": taxa})
+}

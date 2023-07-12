@@ -45,7 +45,7 @@ func main() {
 	{
 		taxon := api.Group("/taxon")
 		{
-			// taxon.GET("/:rank/:id/children", TaxonGetChildren)
+			taxon.GET("/:rank/:id/children", TaxonGetChildren)
 			taxon.GET("/:rank/:id", TaxonGet)
 		}
 	}
