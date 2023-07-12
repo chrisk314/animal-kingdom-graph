@@ -5,11 +5,12 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// DBContext middleware makes db available in request context.
-func DBContext(db arango.Database) echo.MiddlewareFunc {
+// TaxonSvcContext middleware makes TaxonSvc available in request context.
+func TaxonSvcContext(db arango.Database) echo.MiddlewareFunc {
+	taxonSvc := NewTaxonSvc(db)
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			c.Set("db", db)
+			c.Set("taxonSvc", taxonSvc)
 			return next(c)
 		}
 	}

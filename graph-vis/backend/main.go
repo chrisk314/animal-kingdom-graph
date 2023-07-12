@@ -37,7 +37,7 @@ func main() {
 		Level: 5,
 	}))
 
-	router.Use(DBContext(db))
+	router.Use(TaxonSvcContext(db))
 	// router.Use(auth.ParseJWT)
 
 	// Routes

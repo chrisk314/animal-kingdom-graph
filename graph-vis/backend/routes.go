@@ -14,7 +14,7 @@ func badRequest(c echo.Context, msg string) error {
 
 // TaxonGet serves JSON response containing a single taxon by ID.
 func TaxonGet(c echo.Context) (err error) {
-	taxSvc := c.Get("TaxonSvc").(TaxonSvc)
+	taxSvc := c.Get("taxonSvc").(*TaxonSvc)
 	rank := c.Param("rank")
 	id := c.Param("id")
 	if id == "" {
