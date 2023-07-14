@@ -22,18 +22,20 @@ export default {
       const node = event.target;
       const nodeId = node.id();
       console.log("Clicked node: " + nodeId);
-      console.log("successors: " + node.successors().map( (node) => node.id() ));
+      console.log("Successors in graph: " + node.successors().map( (node) => node.id() ));
 
       // Check if child nodes are already displayed
       const childElems = node.successors();
       if (childElems.length > 0) {
         // Remove child nodes and edges from graph
+        console.log("Removing successors from graph.");
         this.cy.remove(childElems);
         return;
       }
 
       // Check if child nodes have already been fetched
       if (this.childNodeCache[nodeId]) {
+        console.log("Adding cached elements to graph.");
         // Add child nodes and edges to graph
         this.cy.add(this.childNodeCache[nodeId].nodes);
         this.cy.add(this.childNodeCache[nodeId].edges);
@@ -43,7 +45,9 @@ export default {
       }
 
       // Call backend api to get child nodes
-      fetch(`http://localhost:5001/api/v1/taxon/${nodeId}/children`)
+      let childNodesUrl = `http://localhost:5001/api/v1/taxon/${nodeId}/children`;
+      console.log("Retreiving nodes from backend API: " + childNodesUrl);
+      fetch(childNodesUrl)
         .then(response => response.json())
         .then(data => {
           // Build child nodes data
