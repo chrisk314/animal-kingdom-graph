@@ -18,12 +18,26 @@ go get
 go build
 ```
 
-## Run
+## Run scraper
 To run an Arango DB server run the below command.
 ```shell
 docker-compose up
 ```
 Now the scraper can be launched with the below command.
 ```shell
-./wiki-scraper/wiki_scraper
+cd ./wiki-scraper && wiki_scraper
+```
+
+## Run visualiser
+To run an Arango DB server run the below command.
+```shell
+docker-compose up
+```
+Run the backend API to serve the graph data with the below command.
+```shell
+cd ./graph-vis/backend && air
+```
+Run the frontend dev server to visualise the graph data with the below command.
+```shell
+cd ./graph-vis/frontend && npm run dev
 ```
