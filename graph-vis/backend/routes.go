@@ -39,7 +39,7 @@ func TaxonGetChildren(c echo.Context) (err error) {
 	if err != nil {
 		return badRequest(c, err.Error())
 	}
-	var taxaResp []TaxonResponse
+	taxaResp := []TaxonResponse{}
 	for _, taxon := range taxa {
 		taxaResp = append(taxaResp, TaxonResponse(taxon))
 	}
