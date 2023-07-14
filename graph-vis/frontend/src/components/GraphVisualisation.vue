@@ -49,7 +49,7 @@ export default {
       }
 
       // Call backend api to get child nodes
-      let childNodesUrl = `http://localhost:5001/api/v1/taxon/${nodeId}/children`;
+      let childNodesUrl = `${this.backend_api_baseurl}/taxon/${nodeId}/children`;
       console.log("Retreiving nodes from backend API: " + childNodesUrl);
       fetch(childNodesUrl)
         .then(response => response.json())
@@ -96,6 +96,7 @@ export default {
     })
     this.cy.on('click', 'node', this.getChildNodes)
     this.childNodeCache = {};
+    this.backend_api_baseurl = import.meta.env.VITE_BACKEND_API_BASEURL;
   },
   beforeDestroy() {
     this.cy.destroy()
