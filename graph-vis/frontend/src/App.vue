@@ -43,13 +43,21 @@ export default {
                     return 'grey';
                 }
               },
-              label: 'data(name)',
+              'border-width': '1px',
+              'border-color': 'black',
+              'width': '10px',
+              'height': '10px',
+              'font-size': '6px',
+              'label': 'data(name)',
+              'text-valign': 'top',
+              'text-halign': 'center'
             },
           },
           {
             selector: 'edge',
             style: {
               'line-color': '#ccc',
+              'width': '1px',
               'target-arrow-color': '#ccc',
               'target-arrow-shape': 'triangle',
             },
