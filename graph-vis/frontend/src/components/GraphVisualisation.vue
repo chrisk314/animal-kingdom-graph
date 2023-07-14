@@ -14,17 +14,33 @@ export default {
     data: {
       type: Object,
       required: true
-    }
+    },
   },
   methods: {
     // on-click event listener for nodes
     getChildNodes: function(event) {
-      // TODO : Only query the API if the node has not been clicked before.
-      // TODO : Close the node if it has been clicked before.
-
       const node = event.target;
       const nodeId = node.id();
       console.log("Clicked node: " + nodeId);
+      console.log("successors: " + node.successors().map( (node) => node.id() ));
+
+      // Check if child nodes are already displayed
+      const childElems = node.successors();
+      if (childElems.length > 0) {
+        // Remove child nodes and edges from graph
+        this.cy.remove(childElems);
+        return;
+      }
+
+      // Check if child nodes have already been fetched
+      if (this.childNodeCache[nodeId]) {
+        // Add child nodes and edges to graph
+        this.cy.add(this.childNodeCache[nodeId].nodes);
+        this.cy.add(this.childNodeCache[nodeId].edges);
+        // Layout graph
+        this.cy.layout(this.data.layout).run();
+        return;
+      }
 
       // Call backend api to get child nodes
       fetch(`http://localhost:5001/api/v1/taxon/${nodeId}/children`)
@@ -34,7 +50,7 @@ export default {
           let childNodes = data.data.map( (child) => {
             return {
               group: "nodes",
-              data: child
+              data: child,
             }
           })
           // Build child edges data
@@ -45,15 +61,16 @@ export default {
                 id: `${nodeId}-${child.id}`,
                 source: nodeId,
                 target: child.id
-              }
+              },
             }
           })
           // Add child nodes and edges to graph
           this.cy.add(childNodes);
           this.cy.add(childEdges);
-          // // Layout graph
+          // Layout graph
           this.cy.layout(this.data.layout).run();
-
+          // Cache child nodes and edges
+          this.childNodeCache[nodeId] = { nodes: childNodes, edges: childEdges };
         })
         .catch(error => console.error(error));
     }
@@ -66,6 +83,7 @@ export default {
       layout: this.data.layout
     })
     this.cy.on('click', 'node', this.getChildNodes)
+    this.childNodeCache = {};
   },
   beforeDestroy() {
     this.cy.destroy()
