@@ -22,7 +22,27 @@ export default {
           {
             selector: 'node',
             style: {
-              'background-color': '#666',
+              'background-color': (node) => {
+                // Set node colour based on rank
+                switch (node.data('rank')) {
+                  case 'Kingdom':
+                    return 'red';
+                  case 'Phylum':
+                    return 'orange';
+                  case 'Class':
+                    return 'yellow';
+                  case 'Order':
+                    return 'green';
+                  case 'Family':
+                    return 'blue';
+                  case 'Genus':
+                    return 'purple';
+                  case 'Species':
+                    return 'pink';
+                  default:
+                    return 'grey';
+                }
+              },
               label: 'data(name)',
             },
           },
