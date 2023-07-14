@@ -36,6 +36,10 @@ export default {
       // Check if child nodes have already been fetched
       if (this.childNodeCache[nodeId]) {
         console.log("Adding cached elements to graph.");
+        if (this.childNodeCache[nodeId].nodes.length == 0) {
+          console.log("No child nodes found.");
+          return;
+        }
         // Add child nodes and edges to graph
         this.cy.add(this.childNodeCache[nodeId].nodes);
         this.cy.add(this.childNodeCache[nodeId].edges);
@@ -68,13 +72,17 @@ export default {
               },
             }
           })
+          // Cache child nodes and edges
+          this.childNodeCache[nodeId] = { nodes: childNodes, edges: childEdges };
+          if (childNodes.length == 0) {
+            console.log("No child nodes found.");
+            return;
+          }
           // Add child nodes and edges to graph
           this.cy.add(childNodes);
           this.cy.add(childEdges);
           // Layout graph
           this.cy.layout(this.data.layout).run();
-          // Cache child nodes and edges
-          this.childNodeCache[nodeId] = { nodes: childNodes, edges: childEdges };
         })
         .catch(error => console.error(error));
     }
