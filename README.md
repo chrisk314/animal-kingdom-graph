@@ -44,7 +44,7 @@ pushd graph-vis/backend
 go get
 popd
 ```
-Install the frontend API dependencies.
+Install the frontend SPA dependencies.
 ```shell
 pushd graph-vis/frontend
 npm install
