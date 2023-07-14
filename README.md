@@ -1,6 +1,8 @@
 # Animal Kingdom Graph
 This project contains tools to visualise the animal kingdom as a graph. There are two components: a Wikipedia scraper; and a graph visualisation web app.
 
+![Sample visualisation of the animal kingdom graph.](./assets/animal-kingdom-graph.png)
+
 ## Scraper
 A Wikipedia scraper implemented in Golang which builds a graph of 
 the animal kingdom. The Colly web crawler package and Goquery package are used to 
