@@ -1,5 +1,9 @@
 <template>
   <div id="cy" ref="cy"></div>
+  <div class="iframe-container" v-if="showIframe">
+    <div class="iframe-shadow"></div>
+    <iframe :src="iframeUrl" class="iframe"></iframe>
+  </div>
 </template>
 
 <script>
@@ -85,24 +89,12 @@ export default {
           this.cy.layout(this.data.layout).run();
         })
         .catch(error => console.error(error));
-    },
-    showIframe(url) {
-      const iframe = document.createElement('iframe')
-      iframe.src = url
-      iframe.style.position = 'absolute'
-      iframe.style.top = '0'
-      iframe.style.left = '0'
-      iframe.style.width = '100%'
-      iframe.style.height = '100%'
-      iframe.style.border = 'none'
-      document.body.appendChild(iframe)
-      this.iframe = iframe
-    },
-    hideIframe() {
-      if (this.iframe) {
-        document.body.removeChild(this.iframe)
-        this.iframe = null
-      }
+    }
+  },
+  data() {
+    return {
+      showIframe: false,
+      iframeUrl: ''
     }
   },
   mounted() {
@@ -125,7 +117,8 @@ export default {
         const node = event.target
         const wikipediaUrl = node.data('url')
         if (wikipediaUrl) {
-          this.showIframe(wikipediaUrl)
+          this.showIframe = true
+          this.iframeUrl = wikipediaUrl
         }
       }, 1000)
     })
@@ -133,7 +126,8 @@ export default {
     // Add event listener for node unhover
     this.cy.on('mouseout', 'node', () => {
       clearTimeout(this.hoverTimeout)
-      this.hideIframe()
+      this.showIframe = false
+      this.iframeUrl = ''
     })
   },
   beforeDestroy() {
@@ -153,5 +147,38 @@ export default {
   position: absolute;
   top: 0px;
   left: 0px;
+}
+.iframe-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  width: 80%;
+  max-width: 800px;
+  height: 80%;
+  max-height: 600px;
+  background-color: white;
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.iframe-shadow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: black;
+  opacity: 0.5;
+}
+
+.iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
 }
 </style>
