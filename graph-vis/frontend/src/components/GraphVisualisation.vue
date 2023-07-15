@@ -85,18 +85,56 @@ export default {
           this.cy.layout(this.data.layout).run();
         })
         .catch(error => console.error(error));
+    },
+    showIframe(url) {
+      const iframe = document.createElement('iframe')
+      iframe.src = url
+      iframe.style.position = 'absolute'
+      iframe.style.top = '0'
+      iframe.style.left = '0'
+      iframe.style.width = '100%'
+      iframe.style.height = '100%'
+      iframe.style.border = 'none'
+      document.body.appendChild(iframe)
+      this.iframe = iframe
+    },
+    hideIframe() {
+      if (this.iframe) {
+        document.body.removeChild(this.iframe)
+        this.iframe = null
+      }
     }
   },
   mounted() {
+    this.childNodeCache = {};
+    this.backend_api_baseurl = import.meta.env.VITE_BACKEND_API_BASEURL;
+
     this.cy = cytoscape({
       container: this.$refs.cy,
       elements: this.data.elements,
       style: this.data.style,
       layout: this.data.layout
     })
+    
+    // Add event listener for node click
     this.cy.on('click', 'node', this.getChildNodes)
-    this.childNodeCache = {};
-    this.backend_api_baseurl = import.meta.env.VITE_BACKEND_API_BASEURL;
+    
+    // Add event listener for node hover
+    this.cy.on('mouseover', 'node', (event) => {
+      this.hoverTimeout = setTimeout(() => {
+        const node = event.target
+        const wikipediaUrl = node.data('url')
+        if (wikipediaUrl) {
+          this.showIframe(wikipediaUrl)
+        }
+      }, 1000)
+    })
+
+    // Add event listener for node unhover
+    this.cy.on('mouseout', 'node', () => {
+      clearTimeout(this.hoverTimeout)
+      this.hideIframe()
+    })
   },
   beforeDestroy() {
     this.cy.destroy()
