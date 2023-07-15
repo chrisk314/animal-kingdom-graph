@@ -1,6 +1,6 @@
 <template>
   <div id="cy" ref="cy"></div>
-  <div class="iframe-container" v-if="showIframe">
+  <div class="iframe-container" v-if="showIframe" @mouseenter="preventHideIframe" @mouseleave="hideIframe">
     <div class="iframe-shadow"></div>
     <iframe :src="iframeUrl" class="iframe"></iframe>
   </div>
@@ -89,6 +89,16 @@ export default {
           this.cy.layout(this.data.layout).run();
         })
         .catch(error => console.error(error));
+    },
+    hideIframe(event) {
+      clearTimeout(this.showIframeTimeout)
+      this.hideIframeTimeout = setTimeout(() => {
+        this.showIframe = false
+        this.iframeUrl = ''
+      }, 500);
+    },
+    preventHideIframe() {
+      clearTimeout(this.hideIframeTimeout)
     }
   },
   data() {
@@ -113,7 +123,7 @@ export default {
     
     // Add event listener for node hover
     this.cy.on('mouseover', 'node', (event) => {
-      this.hoverTimeout = setTimeout(() => {
+      this.showIframeTimeout = setTimeout(() => {
         const node = event.target
         const wikipediaUrl = node.data('url')
         if (wikipediaUrl) {
@@ -124,11 +134,7 @@ export default {
     })
 
     // Add event listener for node unhover
-    this.cy.on('mouseout', 'node', () => {
-      clearTimeout(this.hoverTimeout)
-      this.showIframe = false
-      this.iframeUrl = ''
-    })
+    this.cy.on('mouseout', 'node', this.hideIframe)
   },
   beforeDestroy() {
     this.cy.destroy()
