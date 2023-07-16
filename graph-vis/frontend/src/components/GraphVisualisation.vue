@@ -1,6 +1,6 @@
 <template>
   <div id="cy" ref="cy"></div>
-  <div class="iframe-container" v-if="showIframe" @mouseenter="preventHideIframe" @mouseleave="hideIframe">
+  <div class="iframe-container" v-if="IframeIsVisible" @mouseenter="preventHideIframe" @mouseleave="hideIframe">
     <div class="iframe-shadow"></div>
     <iframe :src="iframeUrl" class="iframe"></iframe>
   </div>
@@ -90,26 +90,55 @@ export default {
         })
         .catch(error => console.error(error));
     },
+    showIframe(event) {
+      if (this.hideIframeTimeout) {
+        clearTimeout(this.hideIframeTimeout);
+        this.hideIframeTimeout = null;
+      }
+      if (this.showIframeTimeout) {
+        clearTimeout(this.showIframeTimeout);
+      }
+      this.showIframeTimeout = setTimeout(() => {
+        const node = event.target
+        const wikipediaUrl = node.data('url')
+        if (wikipediaUrl) {
+          this.IframeIsVisible = true
+          this.iframeUrl = wikipediaUrl
+        }
+        this.showIframeTimeout = null;
+      }, 1000);
+    },
     hideIframe(event) {
       clearTimeout(this.showIframeTimeout)
+      this.showIframeTimeout = null;
+      if (this.hideIframeTimeout) {
+        return;
+      }
+      if (!this.IframeIsVisible) {
+        return;
+      }
       this.hideIframeTimeout = setTimeout(() => {
-        this.showIframe = false
+        this.IframeIsVisible = false
         this.iframeUrl = ''
+        this.hideIframeTimeout = null;
       }, 500);
     },
     preventHideIframe() {
       clearTimeout(this.hideIframeTimeout)
+      this.hideIframeTimeout = null;
     }
   },
   data() {
     return {
-      showIframe: false,
+      IframeIsVisible: false,
       iframeUrl: ''
     }
   },
   mounted() {
     this.childNodeCache = {};
     this.backend_api_baseurl = import.meta.env.VITE_BACKEND_API_BASEURL;
+    this.hideIframeTimeout = null;
+    this.showIframeTimeout = null;
 
     this.cy = cytoscape({
       container: this.$refs.cy,
@@ -122,19 +151,16 @@ export default {
     this.cy.on('click', 'node', this.getChildNodes)
     
     // Add event listener for node hover
-    this.cy.on('mouseover', 'node', (event) => {
-      this.showIframeTimeout = setTimeout(() => {
-        const node = event.target
-        const wikipediaUrl = node.data('url')
-        if (wikipediaUrl) {
-          this.showIframe = true
-          this.iframeUrl = wikipediaUrl
-        }
-      }, 1000)
-    })
+    this.cy.on('mouseover', 'node', this.showIframe)
 
     // Add event listener for node unhover
     this.cy.on('mouseout', 'node', this.hideIframe)
+
+    // Add event listener for node drag
+    this.cy.on('grabon', 'node', this.hideIframe)
+    
+    // Add event listener for node drag end
+    this.cy.on('dragfree', 'node', this.showIframe)
   },
   beforeDestroy() {
     this.cy.destroy()
