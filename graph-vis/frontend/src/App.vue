@@ -64,7 +64,9 @@ export default {
           },
         ],
         layout: {
-          name: "fcose"
+          name: "cola",
+          maxSimulationTime: 2000,
+          edgeLength: 60,
         }
       }
     }
